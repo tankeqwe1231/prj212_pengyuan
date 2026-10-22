@@ -1,0 +1,13 @@
+{% extends "superset/baselayout_for_home.html" %}
+
+  {% block head_css %}
+    {{super()}}
+    <link rel="icon" type="image/png" href="/static/assets/images/favicon.png">
+    <link rel="stylesheet" type="text/css" href="/static/assets/stylesheets/fontawesome6/css/all.min.css">
+  {% endblock %}
+
+  {% block tail_js %}
+      {% if entry %}
+        <script src="{{ js_manifest(entry + '.js') }}"></script>
+      {% endif %}
+  {% endblock %}

@@ -1,0 +1,6 @@
+{% import 'appbuilder/baselib.html' as baselib %}
+{% import 'appbuilder/general/lib.html' as lib %}
+<form id="filter_form" class="form-search fab-list-search mb-3{{ ' d-none' if not active_filters else '' }}" method="get">
+  <div class="table-responsive"><table class="table table-hover filters"><tbody></tbody></table></div>{{ lib.btn_search() }}
+</form>
+<script nonce="{{ baselib.get_nonce() }}">new AdminFilters('#filter_form', {{ label_columns | tojson }}, {{ form_fields | tojson }}, {{ search_filters | tojson }}, {{ active_filters | tojson }}, '#list-filter-selector');</script>

@@ -1,0 +1,17 @@
+{% set menu = appbuilder.menu %}
+{% set WARNING_MSG = appbuilder.app.config.get('WARNING_MSG') %}
+
+<nav class="navbar navbar-expand-lg navbar-dark client-navbar" role="navigation">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/superset/home_page/"><img width="150" src="{{ appbuilder.app_icon }}" alt="{{ appbuilder.app_name }}" /></a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#react-client-navbar" aria-controls="react-client-navbar" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="react-client-navbar">
+      <ul class="navbar-nav mb-2 mb-lg-0">
+        {% if WARNING_MSG %}<li class="nav-item alert alert-danger py-1 my-1">{{ WARNING_MSG | safe }}</li>{% endif %}
+      </ul>
+      <div id="navbar" current_top_category="{{ current_top_category }}" current_sub_category="{{ current_sub_category }}" top_category_lst="{{ top_category_lst }}" second_category_list_order="{{ second_category_list_order }}" userId="{{ userId }}" data-js="{{ top_category_dict }}"></div>
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">{% include 'appbuilder/navbar_menu_react.html' %}</ul>
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">{% include 'appbuilder/navbar_right_react_for_client.html' %}</ul>
+    </div>
+  </div>
+</nav>

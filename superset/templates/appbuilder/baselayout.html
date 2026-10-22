@@ -1,0 +1,24 @@
+{% extends 'appbuilder/init.html' %}
+{% block body %}
+  <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+  {% include 'appbuilder/general/confirm_react.html' %}
+  {% include 'appbuilder/general/alert_react.html' %}
+  {% block navbar %}
+    <header class="top" role="header">
+      {% include 'appbuilder/navbar_react.html' %}
+    </header>
+  {% endblock %}
+  {% block uncontained %}{% endblock %}
+  <main class="container fab-content">
+    {% block messages %}{% include 'superset/flash_wrapper.html' %}{% endblock %}
+    {% block content %}{% endblock %}
+  </main>
+  <div class="container-fluid">
+    {% block content_fluid %}{% endblock %}
+  </div>
+  {% block footer %}
+    <footer class="container-fluid">
+      {% include 'appbuilder/footer_for_client.html' %}
+    </footer>
+  {% endblock %}
+{% endblock %}

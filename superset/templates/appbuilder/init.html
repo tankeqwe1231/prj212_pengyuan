@@ -1,0 +1,33 @@
+{% import 'appbuilder/baselib.html' as baselib with context %}
+{% if appbuilder %}{% set app_name = appbuilder.app_name %}{% endif %}
+<!DOCTYPE html>
+<html lang="{{ session.get('locale', 'en') }}">
+  <head>
+    <title>{% block page_title %}{{ app_name }}{% endblock %}</title>
+    {% block head_meta %}
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=1200, target-densitydpi=device-dpi">
+      <meta name="renderer" content="webkit">
+    {% endblock %}
+    {% block head_css %}
+      <link rel="icon" type="image/png" href="/static/assets/images/favicon.png">
+      <link rel="stylesheet" href="{{ js_manifest('fabBs5.css') }}">
+      <link rel="stylesheet" href="{{ url_for('appbuilder.static', filename='css/flags/flags16.css') }}">
+      <link rel="stylesheet" href="{{ url_for('appbuilder.static', filename='css/fontawesome/fontawesome.min.css') }}">
+      <link rel="stylesheet" href="{{ url_for('appbuilder.static', filename='css/fontawesome/regular.min.css') }}">
+      <link rel="stylesheet" href="{{ url_for('appbuilder.static', filename='css/fontawesome/solid.min.css') }}">
+      <link rel="stylesheet" href="{{ url_for('appbuilder.static', filename='css/fontawesome/brands.min.css') }}">
+      <link rel="stylesheet" href="{{ url_for('appbuilder.static', filename='css/fontawesome/v4-font-face.min.css') }}">
+      <link rel="stylesheet" href="{{ url_for('appbuilder.static', filename='css/fontawesome/v4-shims.min.css') }}">
+    {% endblock %}
+    {% block head_js %}
+      <script src="{{ js_manifest('fabBs5.js') }}" nonce="{{ baselib.get_nonce() }}"></script>
+    {% endblock %}
+  </head>
+  <body class="fab-bs5-page">
+    {% block body %}{% endblock %}
+    {% block tail_js %}{% endblock %}
+    {% block add_tail_js %}{% endblock %}
+    {% block tail %}{% endblock %}
+  </body>
+</html>

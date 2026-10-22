@@ -1,0 +1,11 @@
+{% import 'appbuilder/general/lib.html' as lib %}
+{% if form_action is defined %}<form action="{{ form_action }}" method="post" enctype="multipart/form-data">{% else %}<form id="model_form" action="" method="post" enctype="multipart/form-data">{% endif %}
+  {% if form.csrf_token is defined %}{{ form.csrf_token(id='model_csrf_token') }}{% endif %}
+  {% for hidden_field in form if hidden_field.type == 'HiddenField' and hidden_field.name != 'csrf_token' %}{{ hidden_field }}{% endfor %}
+  {% if fieldsets %}
+    {% for fieldset_item in fieldsets %}{% set expanded = fieldset_item[1].get('expanded', True) %}{% call lib.accordion_tag(loop.index, fieldset_item[0], expanded) %}{% for item in fieldset_item[1].get('fields') %}{% if item not in exclude_cols %}<div class="mb-3 fab-form-field">{{ lib.render_field(form[item]) }}</div>{% endif %}{% endfor %}{% endcall %}{% endfor %}
+  {% else %}
+    {% for col in include_cols %}{% set field = form[col] %}{% if field.name not in exclude_cols %}<div class="mb-3 fab-form-field">{{ lib.render_field(field) }}</div>{% endif %}{% endfor %}
+  {% endif %}
+  {{ lib.render_form_controls() }}
+</form>

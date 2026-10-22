@@ -1,0 +1,16 @@
+{% extends "appbuilder/base.html" %}
+{% import 'appbuilder/general/lib.html' as lib %}
+{% block content %}
+  <div class="row g-3">
+    <div class="col-md-{{ master_div_width }}">
+      {{ lib.panel_begin(title) }}{{ widgets.get('list')() | safe }}{{ lib.panel_end() }}
+    </div>
+    {% for view in related_views %}
+      <div class="col-md-{{ 12 - master_div_width }}">
+        {{ lib.panel_begin(view.list_title) }}
+        {{ widgets.get('related_views')[loop.index - 1](pk=pk) | safe }}
+        {{ lib.panel_end() }}
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}

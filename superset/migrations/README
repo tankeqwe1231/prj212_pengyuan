@@ -1,0 +1,117 @@
+# PostgreSQL 18 数据库迁移与初始化
+
+## 执行前提
+
+- 已在 PostgreSQL 18 中建立目标空数据库，并授予连接用户在 public schema 中建表等所需权限。
+- 项目配置中的 SQLALCHEMY_DATABASE_URI 已指向该空数据库，相关资源使用本地或隔离测试配置。
+- 当前终端已位于项目根目录，项目的 Python 3.12 .venv 环境已安装好依赖。
+
+默认配置下，只需按顺序执行下方三条命令，即可完成建表、管理员创建和角色权限初始化。
+每一步成功后再执行下一步。无需先激活虚拟环境，也无需额外设置权限开关。
+
+## Windows：PowerShell / VS Code PowerShell 终端
+
+```powershell
+& '.\.venv\Scripts\python.exe' superset\bin\superset db upgrade
+& '.\.venv\Scripts\python.exe' -m flask --app superset:app fab create-admin
+& '.\.venv\Scripts\python.exe' superset\bin\superset init
+```
+
+PowerShell 中，带引号的程序路径前需要加 & 才能执行；不要省略。
+
+## Ubuntu 22.04：Bash / VS Code Bash 终端
+
+```bash
+./.venv/bin/python superset/bin/superset db upgrade
+./.venv/bin/python -m flask --app superset:app fab create-admin
+./.venv/bin/python superset/bin/superset init
+```
+
+Ubuntu 使用 .venv/bin/python，Windows 使用 .venv\Scripts\python.exe。
+Ubuntu 上同样必须使用项目的 Python 3.12 环境，不要直接使用系统默认 Python。
+Windows 的 .venv 不能复制到 Ubuntu 使用。首次在 Ubuntu 部署且尚未准备环境时，
+先安装 uv，再在项目根目录执行一次：
+
+```bash
+uv sync --locked --python 3.12
+```
+
+## 三条命令分别做什么
+
+1. db upgrade：执行 Alembic 迁移，创建完整的元数据表和业务表结构，并记录迁移版本。
+2. fab create-admin：按提示输入用户名、姓名、邮箱和密码，创建拥有 Admin 角色的用户。
+   用户名默认是 admin，可以修改；输入密码时不显示字符。确认输出管理员创建成功后再继续。
+3. init：创建或更新 main 数据库引用，同步 Admin、Alpha、Gamma、granter、sql_lab 等角色权限；
+   启用 PUBLIC_ROLE_LIKE_GAMMA 时还会同步 Public。该命令本身不会创建管理员用户。
+
+db upgrade 必须先执行；建表成功后，第 2、3 步可以交换顺序。
+如果已经完成建表和权限初始化，仅需执行 fab create-admin 创建管理员。
+已有管理员时不必重复创建。init 会按代码规则重新同步默认角色的权限，不会恢复旧系统的业务数据或自定义授权。
+
+## 是否必须设置 SUPERSET_CONFIG 和权限开关
+
+默认情况下不需要手动设置，直接执行上述三条命令即可。
+
+- SUPERSET_CONFIG 是环境变量；未设置时自动使用 superset.config。
+  只有需要选择其他配置模块时才设置，值为可导入的 Python 模块名，不带 .py。
+- SUPERSET_UPDATE_PERMS 是环境变量；未设置时默认启用。
+  只有将其设为 0、false 或 no（不区分大小写）时才关闭。
+- FAB_UPDATE_PERMS 是 Python 配置项；未配置时 FAB 默认使用 True。
+  当前项目的默认配置没有将其关闭，不需要额外添加该配置项，也不需要为它设置环境变量。
+
+完整初始化需要允许注册视图和菜单权限，但这两个开关本来就默认启用。
+“需要启用”不等于“每次必须手动设置”。如果你之前在终端或自定义配置中显式关闭过它们，
+则需先移除关闭设置或恢复为启用状态，否则可能缺少视图和菜单权限。
+
+## 可选：检查初始化结果
+
+Windows PowerShell：
+
+```powershell
+& '.\.venv\Scripts\python.exe' superset\bin\superset db current
+& '.\.venv\Scripts\python.exe' -m flask --app superset:app fab list-users
+```
+
+Ubuntu 22.04 Bash：
+
+```bash
+./.venv/bin/python superset/bin/superset db current
+./.venv/bin/python -m flask --app superset:app fab list-users
+```
+
+当前基线对应的迁移版本应为 20260905_postgresql18 (head)，用户列表中应能看到新管理员及其 Admin 角色。
+
+## 迁移基线说明
+
+迁移历史于 2026-09-05 按已部署的 PostgreSQL 18 实际结构重建。
+versions/ 中当前只有一个基线版本，后续新增迁移必须从该版本延续。
+历史 MySQL 迁移脚本保留在 Git 历史中，Alembic 不再扫描它们。
+
+基线包含 41 张业务和元数据表。生成器和验证器会排除 Superset 示例数据表及名称包含 _copy 的备份表。
+基线不包含业务数据，也不包含 alembic_version 表；该版本表由 Alembic 创建和维护。
+
+应用首次连接空库时，会暂缓 FAB 自动建表和权限注册，让 db upgrade 先完成迁移。
+建表完成后，下一个命令进程会正常注册权限。
+基线 SQL 会清空连接的 search_path，因此迁移环境明确将版本表定位为 public.alembic_version。
+执行迁移前还会释放应用启动时的 ORM session，避免其事务持有的锁阻塞迁移 DDL。
+
+此基线仅用于全新空数据库，禁止对已有业务数据库执行基线建表，也不要用 stamp 代替空库迁移。
+
+## 可选：运行隔离集成测试
+
+以下测试会启动并清理独立的 PostgreSQL 18 临时实例，不使用项目配置中的元数据库。
+它覆盖空库导入、迁移、管理员创建、权限同步、重复初始化、不同角色登录和降级。
+SUPERSET_TEST_POSTGRES_BIN 仅供测试使用，正常初始化不需要设置。
+
+Windows PowerShell（按实际安装位置修改 PostgreSQL 路径）：
+
+```powershell
+$env:SUPERSET_TEST_POSTGRES_BIN = 'D:\Program Files\PostgreSQL\18\bin'
+& '.\.venv\Scripts\python.exe' -B -m unittest tests.test_initialization -v
+```
+
+Ubuntu 22.04 Bash（已安装 PostgreSQL 18，路径按实际安装位置调整；使用普通用户运行）：
+
+```bash
+SUPERSET_TEST_POSTGRES_BIN=/usr/lib/postgresql/18/bin ./.venv/bin/python -B -m unittest tests.test_initialization -v
+```

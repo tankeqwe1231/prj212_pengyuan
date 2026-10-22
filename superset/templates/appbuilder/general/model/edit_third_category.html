@@ -1,0 +1,66 @@
+{% extends "appbuilder/base.html" %}
+{% import 'appbuilder/general/lib.html' as lib %}
+
+{% block content %}
+{{ lib.panel_begin(title, 'edit') }}
+
+{% if related_views %}
+    <ul class="nav nav-tabs">
+    <li class="nav-item"><a class="nav-link active" href="#Home" data-bs-toggle="tab">{{ _("Detail") }}</a> </li>
+        {% for view in related_views %}
+        <li class="nav-item"><a class="nav-link" href="#{{view.__class__.__name__}}" data-bs-toggle="tab">{{view.title}}</a></li>
+        {% endfor %}
+        </ul>
+
+        <div class="tab-content pt-3">
+        {% for view in related_views %}
+        <div id="{{view.__class__.__name__}}" class="tab-pane fade">
+        {{ widgets.get('related_views')[loop.index - 1]()|safe }}
+    </div>
+    {% endfor %}
+{% endif %}
+
+{% block edit_form %}
+    <div id="Home" class="tab-pane fade show active">
+        {{ widgets.get('edit')(form_action=form_action)|safe }}
+    </div>
+
+{% endblock %}
+
+    {% if related_views %} </div> {% endif %}
+
+{{ lib.panel_end() }}
+{% endblock %}
+
+{% block add_tail_js %}
+<div data-js="{{ categorydata }}" id="categorydata_map"></div>
+    <script>
+    let categorydata_map = document.getElementById('categorydata_map').getAttribute('data-js');
+    categorydata_map=JSON.parse(categorydata_map)
+    //console.log(categorydata_map);
+
+    function selectchange()
+    {
+        if($("#top_category").val()) {
+            $("#second_category").html('')
+            let second_category = categorydata_map[$("#top_category").val()]
+            if (second_category) {
+                second_category.forEach((val, i) => {
+                    $("#second_category").append("<option value='" + val.id + "'>" + val.name + "</option>")
+                    if (i == 0) {
+                        $("#second_category").val(val.id).trigger('change')
+                    }
+                })
+            }
+        }
+    }
+    $("#top_category").val("{{ topcategoryid }}")
+    selectchange()
+    $("#second_category").val("{{ secondcategoryid }}")
+
+    $(document).on('change', '#top_category', function() {
+        //console.log($(this).val());
+        selectchange()
+});
+    </script>
+{% endblock %}

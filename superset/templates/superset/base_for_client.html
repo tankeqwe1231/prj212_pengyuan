@@ -1,0 +1,10 @@
+{% extends "superset/baselayout_for_client.html" %}
+
+  {% block head_css %}
+    {{super()}}
+  {% endblock %}
+
+  {% block tail_js %}
+    {{super()}}
+    <script src="{{ js_manifest('custom.js') }}"></script>
+  {% endblock %}

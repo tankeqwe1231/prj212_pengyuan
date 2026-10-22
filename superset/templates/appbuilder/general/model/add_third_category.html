@@ -1,0 +1,41 @@
+{% extends "appbuilder/base.html" %}
+{% import 'appbuilder/general/lib.html' as lib %}
+
+{% block content %}
+{{ lib.panel_begin(title, 'add') }}
+
+{% block add_form %}
+    {{ widgets.get('add')(form_action=form_action)|safe }}
+{% endblock %}
+
+{{ lib.panel_end() }}
+    <div data-js="{{ categorydata }}" id="categorydata_map"></div>
+    <script>
+    let categorydata_map = document.getElementById('categorydata_map').getAttribute('data-js');
+    categorydata_map=JSON.parse(categorydata_map)
+    //console.log(categorydata_map);
+
+    function selectchange()
+    {
+        if ($("#top_category").val()) {
+            $("#second_category").html('')
+            let second_category = categorydata_map[$("#top_category").val()]
+            if (second_category) {
+            second_category.forEach((val, i) => {
+                $("#second_category").append("<option value='" + val.id + "'>" + val.name + "</option>")
+                if (i == 0) {
+                    $("#second_category").val(val.id).trigger('change')
+                }
+            })
+        }
+        }
+    }
+
+    selectchange()
+
+    $(document).on('change', '#top_category', function() {
+        //console.log($(this).val());
+        selectchange()
+});
+    </script>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends 'superset/basic_for_client.html' %}
+{% import 'appbuilder/baselib.html' as baselib %}
+
+{% block react_body %}
+        {% include 'appbuilder/general/confirm_react.html' %}
+        {% include 'appbuilder/general/alert_react.html' %}
+
+{#    <div class="row row-custom">#}
+    <div class="row-custom">
+      <div id="sidebar" style="height: 100%" class="sidebar-fixed">
+      </div>
+      <div id="row-main-container" class="row-main-container">
+      </div>
+    </div>
+
+    {% block footer %}
+        <footer>
+        <div class="rounded nav-fixed-bottom">
+            <div class="container">
+                {% include 'appbuilder/footer_for_client.html' %}
+            </div>
+        </div>
+        </footer>
+    {% endblock %}
+{% endblock %}
+

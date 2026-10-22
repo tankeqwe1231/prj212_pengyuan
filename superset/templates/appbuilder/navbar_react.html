@@ -1,0 +1,23 @@
+{% set menu = appbuilder.menu %}
+{% set languages = appbuilder.languages %}
+{% set WARNING_MSG = appbuilder.app.config.get('WARNING_MSG') %}
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark" role="navigation">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/superset/profile/{{ current_user.username }}/">
+      <img width="150" src="{{ appbuilder.app_icon }}" alt="{{ appbuilder.app_name }}" />
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#react-main-navbar" aria-controls="react-main-navbar" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="react-main-navbar">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        {% if WARNING_MSG %}<li class="nav-item alert alert-danger py-1 my-1">{{ WARNING_MSG | safe }}</li>{% endif %}
+        {% include 'appbuilder/navbar_menu_react.html' %}
+      </ul>
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+        {% include 'appbuilder/navbar_right_react.html' %}
+      </ul>
+    </div>
+  </div>
+</nav>

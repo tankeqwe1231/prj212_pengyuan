@@ -1,0 +1,32 @@
+`ab_user`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `first_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `last_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `username` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `password` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+  `active` tinyint(1) NULL DEFAULT NULL,
+  `email` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `last_login` datetime NULL DEFAULT NULL,
+  `login_count` int(11) NULL DEFAULT NULL,
+  `fail_login_count` int(11) NULL DEFAULT NULL,
+  `created_on` datetime NULL DEFAULT NULL,
+  `changed_on` datetime NULL DEFAULT NULL,
+  `created_by_fk` int(11) NULL DEFAULT NULL,
+  `changed_by_fk` int(11) NULL DEFAULT NULL,
+  `dept` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+  `expire_date` datetime NULL DEFAULT NULL,
+  `mobile_phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+  `person_contact` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+  `home_dash_id` int(11) NULL DEFAULT NULL,
+  `agree_time` datetime NULL DEFAULT NULL,
+  `agree_ip` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `username`(`username`) USING BTREE,
+  UNIQUE INDEX `email`(`email`) USING BTREE,
+  INDEX `created_by_fk`(`created_by_fk`) USING BTREE,
+  INDEX `changed_by_fk`(`changed_by_fk`) USING BTREE,
+  CONSTRAINT `ab_user_ibfk_1` FOREIGN KEY (`created_by_fk`) REFERENCES `ab_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `ab_user_ibfk_2` FOREIGN KEY (`changed_by_fk`) REFERENCES `ab_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 1646 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
+
+SET FOREIGN_KEY_CHECKS = 1;

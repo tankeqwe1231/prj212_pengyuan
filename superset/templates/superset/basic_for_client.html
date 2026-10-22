@@ -1,0 +1,85 @@
+{% import 'appbuilder/general/lib.html' as lib %}
+<html>
+  <head>
+    <title>
+      {% block title %}
+        {% if title %}
+          {{ title }}
+        {% elif appbuilder and appbuilder.app_name %}
+          {{ appbuilder.app_name }}
+        {% endif %}
+      {% endblock %}
+    </title>
+    {% block head_meta %}
+        <meta name="viewport" content="width=1200, target-densitydpi=device-dpi">
+        <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
+    {% endblock %}
+    {% block head_css %}
+      <link rel="icon" type="image/png" href="/static/assets/images/favicon.png">
+      <link rel="stylesheet" type="text/css" href="/static/appbuilder/css/flags/flags16.css" />
+      <link rel="stylesheet" type="text/css" href="{{ js_manifest('reactTheme.css') }}" />
+      <link rel="stylesheet" type="text/css" href="{{ url_for('appbuilder.static', filename='css/fontawesome/fontawesome.min.css') }}">
+      <link rel="stylesheet" type="text/css" href="{{ url_for('appbuilder.static', filename='css/fontawesome/regular.min.css') }}">
+      <link rel="stylesheet" type="text/css" href="{{ url_for('appbuilder.static', filename='css/fontawesome/solid.min.css') }}">
+      <link rel="stylesheet" type="text/css" href="{{ url_for('appbuilder.static', filename='css/fontawesome/brands.min.css') }}">
+      <link rel="stylesheet" type="text/css" href="{{ url_for('appbuilder.static', filename='css/fontawesome/v4-font-face.min.css') }}">
+      <link rel="stylesheet" type="text/css" href="{{ url_for('appbuilder.static', filename='css/fontawesome/v4-shims.min.css') }}">
+      <link rel="stylesheet" type="text/css" href="{{ js_manifest('custom.css') }}" />
+      {% if entry %}
+        <link rel="stylesheet" type="text/css" href="{{ js_manifest(entry + '.css') }}" />
+      {% endif %}
+    {% endblock %}
+    {% block head_js %}
+{#      <script src="{{ js_manifest('common.js') }}"></script>#}
+        <script src="/static/assets/javascripts/ckeditor/ckeditor.js"></script>
+        <script src="{{ js_manifest('echarts.min.4.8.js') }}"></script>
+    {% endblock %}
+  </head>
+
+  <body>
+    <input
+      type="hidden"
+      name="csrf_token"
+      id="csrf_token"
+      value="{{ csrf_token() if csrf_token else '' }}"
+    >
+    {% block navbar %}
+      {% if not standalone_mode %}
+        <header class="top" role="header">
+          {% include 'appbuilder/navbar_react_for_client.html' %}
+        </header>
+      {% endif %}
+    {% endblock %}
+
+    {% block react_body %}
+      <div id="SplitPaneDom" data-bootstrap="{{ bootstrap_data }}">
+      </div>
+    {% endblock %}
+
+    <!-- Modal for misc messages / alerts  -->
+    <div class="misc-modal modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title" id="myModalLabel"></h4>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="{{ js_manifest('reactShell.js') }}"></script>
+    {% if not standalone_mode %}
+      <script src="{{ js_manifest('custom.js') }}"></script>
+    {% endif %}
+    {% block tail_js %}
+      {% if entry %}
+        <script src="{{ js_manifest(entry + '.js') }}"></script>
+      {% endif %}
+    {% endblock %}
+  </body>
+</html>

@@ -1,0 +1,17 @@
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="{{ js_manifest('indexmanage.css') }}" />
+    <link rel="stylesheet" type="text/css" href="{{ js_manifest('reactTheme.css') }}" />
+</head>
+<body>
+<input
+        type="hidden"
+        name="csrf_token"
+        id="csrf_token"
+        value="{{ csrf_token() if csrf_token else '' }}"
+>
+<div id="ag_grid_container" data-db_dict="{{ db_dict }}" data-index_manage="{{ index_manage }}"></div>
+</body>
+<script src="{{ js_manifest('echarts.min.4.8.js') }}"></script>
+<script src="{{ js_manifest('indexmanage.js') }}"></script>
+</html>

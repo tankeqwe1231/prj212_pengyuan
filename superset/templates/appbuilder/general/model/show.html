@@ -1,0 +1,15 @@
+{% extends "appbuilder/base.html" %}
+{% import 'appbuilder/general/lib.html' as lib %}
+{% block content %}
+  {{ lib.panel_begin(title, 'show') }}
+  {% if related_views is defined and related_views %}
+    <ul class="nav nav-tabs" role="tablist">
+      <li class="nav-item"><a class="nav-link active" href="#Home" data-bs-toggle="tab" role="tab">{{ _('Detail') }}</a></li>
+      {% for view in related_views %}<li class="nav-item"><a class="nav-link" href="#{{ view.__class__.__name__ }}" data-bs-toggle="tab" role="tab">{{ view.title }}</a></li>{% endfor %}
+    </ul>
+    <div class="tab-content pt-3">{% for view in related_views %}<div id="{{ view.__class__.__name__ }}" class="tab-pane fade">{{ widgets.get('related_views')[loop.index - 1](pk=pk) | safe }}</div>{% endfor %}
+  {% endif %}
+  {% block show_form %}<div id="Home" class="tab-pane fade show active">{{ widgets.get('show')() | safe }}</div>{% endblock %}
+  {% if related_views is defined and related_views %}</div>{% endif %}
+  {{ lib.panel_end() }}
+{% endblock %}

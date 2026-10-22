@@ -1,0 +1,41 @@
+{% set locale = session['locale'] %}
+{% if not locale %}{% set locale = 'cn' %}{% endif %}
+
+{% if languages.keys()|length > 1 %}
+  <li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="javascript:void(0)" role="button" aria-expanded="false">
+      <span class="f16"><i class="flag {{ languages[locale].get('flag') }}"></i></span>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end" id="language-picker">
+      {% for lang in languages %}
+        {% if lang != locale %}
+          <li>
+            <a class="dropdown-item" href="{{ appbuilder.get_url_for_locale(lang) }}">
+              <span class="f16"><i class="flag {{ languages[lang].get('flag') }}"></i></span>
+              {{ languages[lang].get('name') }}
+            </a>
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </li>
+{% endif %}
+
+{% if current_user.username != 'admin' %}
+  <li class="nav-item" id="search-slices"></li>
+  <li class="nav-item dropdown" id="myMonitors"></li>
+{% endif %}
+
+{% if not current_user.is_anonymous %}
+  <li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" title="{{ g.user.get_full_name() }}" href="javascript:void(0)" role="button" aria-expanded="false">
+      <i class="fa fa-user"></i>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end" id="user-dropdown">
+      <li><a class="dropdown-item" href="{{ appbuilder.get_url_for_userinfo }}"><span class="fa fa-fw fa-user"></span>{{ _("Profile") }}</a></li>
+      <li><a class="dropdown-item" href="{{ appbuilder.get_url_for_logout }}"><span class="fa fa-fw fa-sign-out"></span>{{ _("Logout") }}</a></li>
+    </ul>
+  </li>
+{% else %}
+  <li class="nav-item"><a class="nav-link" href="{{ appbuilder.get_url_for_login }}"><i class="fa fa-fw fa-sign-in"></i>{{ _("Login") }}</a></li>
+{% endif %}

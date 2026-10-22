@@ -1,0 +1,23 @@
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="{{ js_manifest('reportsdata.css') }}" />
+    <link rel="stylesheet" type="text/css" href="{{ js_manifest('reactTheme.css') }}" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('appbuilder.static', filename='css/fontawesome/fontawesome.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('appbuilder.static', filename='css/fontawesome/regular.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('appbuilder.static', filename='css/fontawesome/solid.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('appbuilder.static', filename='css/fontawesome/brands.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('appbuilder.static', filename='css/fontawesome/v4-font-face.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('appbuilder.static', filename='css/fontawesome/v4-shims.min.css') }}">
+</head>
+<body>
+<input
+        type="hidden"
+        name="csrf_token"
+        id="csrf_token"
+        value="{{ csrf_token() if csrf_token else '' }}"
+>
+<div id="row-main-container" init-data-dict="{{ init_data_dict }}" page-name="{{page_name}}"></div>
+</body>
+<script src="{{ js_manifest('reactShell.js') }}"></script>
+<script src="{{ js_manifest('reportsdata.js') }}"></script>
+</html>

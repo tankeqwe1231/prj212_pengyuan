@@ -1,0 +1,12 @@
+{% import 'appbuilder/baselib.html' as baselib %}
+{% import 'appbuilder/general/lib.html' as lib %}
+{% set can_show = 'can_show' | is_item_visible(modelview_name) %}
+{% set can_edit = 'can_edit' | is_item_visible(modelview_name) %}
+{% set can_delete = 'can_delete' | is_item_visible(modelview_name) %}
+{% set actions = actions | get_actions_on_list(modelview_name) %}
+{% if count > 0 %}
+  {% block begin_content scoped %}{% endblock %}{% block begin_loop_header scoped %}{% endblock %}{% block begin_loop_values %}{% endblock %}{% block end_content scoped %}{% endblock %}
+{% else %}<div class="alert alert-info mb-0">{{ _('No records found') }}</div>{% endif %}
+{% block list_footer scoped %}{{ lib.render_list_footer(page, page_size, count, actions, modelview_name) }}{% endblock %}
+{{ lib.action_form(actions, modelview_name) }}
+<script nonce="{{ baselib.get_nonce() }}">window.modelActions = new AdminActions();</script>

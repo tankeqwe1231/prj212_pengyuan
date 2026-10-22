@@ -1,0 +1,99 @@
+[project]
+name = "superset-legacy-py312"
+version = "0.23.0.dev0"
+description = "Python 3.12 runtime dependencies for the legacy Superset application"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "alembic>=1.13,<1.15",
+    "aliyun-python-sdk-core==2.16.0",
+    "aliyun-python-sdk-sts>=3,<4",
+    "beautifulsoup4>=4.12,<5",
+    "bleach>=6.1,<7",
+    "boto3>=1.34,<2",
+    "celery>=5.4,<5.5",
+    "click>=8.1,<9",
+    "colorama>=0.4,<1",
+    "cryptography>=42,<45",
+    "Flask==2.3.3",
+    "Flask-AppBuilder==4.5.3",
+    "Flask-Babel>=2,<3",
+    "Flask-Caching>=2.1,<3",
+    "Flask-Compress>=1.14,<2",
+    "Flask-Cors>=4,<6",
+    "Flask-Login>=0.6,<0.7",
+    "Flask-Migrate>=4,<5",
+    "Flask-OpenID>=1.3,<2",
+    "Flask-SQLAlchemy>=2.5,<3",
+    "Flask-WTF>=1.2,<2",
+    "flower>=2,<3",
+    "future>=1,<2",
+    "geopy>=2.4,<3",
+    "greenlet==3.5.3",
+    "gunicorn>=21,<24",
+    "humanize>=4,<5",
+    "ipython>=8.18,<9",
+    "lxml>=5,<6",
+    "Markdown>=3.5,<4",
+    "mysqlclient>=2.2,<3",
+    "numpy>=1.26,<2",
+    "openpyxl>=3.1,<4",
+    "oss2>=2.19,<3",
+    # Pandas 2.2 requires SQLAlchemy 2.0; phase one intentionally stays on 1.4.
+    "pandas>=2.1,<2.2",
+    "parsedatetime>=2.6,<3",
+    "Pillow>=10,<12",
+    "polyline>=2,<3",
+    "pydruid>=0.6,<1",
+    "PyHive>=0.7,<1",
+    "PyMuPDF==1.28.0",
+    "pymssql==2.3.13",
+    "psycopg2-binary>=2.9,<3",
+    "python-dateutil>=2.8,<3",
+    "geohash2>=1.1,<2",
+    "python-pptx>=1,<2",
+    "python3-openid>=3.2,<4",
+    "PyYAML>=6,<7",
+    "redis>=5,<6",
+    "requests>=2.31,<3",
+    "selenium>=4.15,<5",
+    "simplejson>=3.19,<4",
+    # infi.clickhouse-orm imports the deprecated pkg_resources compatibility API.
+    "setuptools>=69,<81",
+    "Spire.Presentation==11.8.1; sys_platform == 'win32' or sys_platform == 'linux'",
+    "SQLAlchemy>=1.4.54,<1.5",
+    "SQLAlchemy-Utils>=0.41,<1",
+    "sqlalchemy-clickhouse==0.1.5.post0",
+    "infi.clickhouse-orm>=2,<3",
+    "sqlparse>=0.4,<1",
+    "thrift>=0.16,<1",
+    "thrift-sasl>=0.4,<1",
+    "Unidecode>=1.3,<2",
+    "unicodecsv>=0.14,<1",
+    "Werkzeug>=2.3,<3",
+    "WTForms>=3.1,<4",
+    "XlsxWriter>=3,<4",
+    "xlrd>=2,<3",
+    "pycryptodome>=3.23.0",
+]
+
+[tool.uv]
+package = true
+cache-dir = "./.uv-cache"
+
+[tool.uv.sources]
+# 使用自制 wheel，按运行平台选择，避免安装同版本的官方包。
+spire-presentation = [
+    { path = "vendor/wheels/spire_presentation-11.8.1-py3-none-win_amd64.whl", marker = "sys_platform == 'win32'" },
+    { path = "vendor/wheels/spire_presentation-11.8.1-py3-none-manylinux_2_34_x86_64.whl", marker = "sys_platform == 'linux'" },
+]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["superset*"]
+exclude = ["superset.assets.node_modules*"]

@@ -1,0 +1,18 @@
+{% extends "appbuilder/base.html" %}
+{% import 'appbuilder/general/lib.html' as lib %}
+{% block content %}
+  {% set list_widget = widgets.get('list') %}
+  {% set list_args = list_widget.template_args %}
+  {% set modelview_name = list_args.get('modelview_name') %}
+  {% set can_add = 'can_add' | is_item_visible(modelview_name) %}
+  <section class="card fab-card list">
+    <div class="card-header fab-list-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+      <h4 class="card-title">{{ title }}</h4>
+      {{ lib.render_list_header_controls(widgets.get('search'), can_add, modelview_name, list_args.get('filters')) }}
+    </div>
+    <div class="card-body list-container">
+      {% block list_search scoped %}{{ widgets.get('search')() | safe }}{% endblock %}
+      {% block list_list scoped %}{{ list_widget() | safe }}{% endblock %}
+    </div>
+  </section>
+{% endblock %}
