@@ -1,0 +1,14 @@
+**/*{.,-}min.js
+**/*.sh
+coverage/**
+dist/*
+externals/*
+images/*
+node_modules/*
+node_modules*/*
+stylesheets/*
+vendor/*
+docs/*
+javascripts/ckeditor/**
+javascripts/modules/maps/*
+visualizations/echarts_world_flow.js

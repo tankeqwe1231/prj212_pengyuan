@@ -1,0 +1,296 @@
+.ag-floating-filter-button {
+    display: none !important;
+}
+
+.ag-theme-balham .ag-header-cell, .ag-theme-balham .ag-header-group-cell {
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-all !important;
+    line-height: 1.2 !important;
+}
+
+.ag-header-group-cell-label, .ag-header-cell-label {
+    display: -webkit-box;
+}
+
+/* 表格内容自动换行 */
+.ag-theme-balham .ag-cell {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-all !important;
+    line-height: 1.2 !important;
+    padding: 0px 0px !important;
+    font-family: "Tahoma, Geneva, sans-serif" !important;
+}
+
+body{
+    margin: 0px !important;
+    
+}
+
+
+.btn-action {
+    padding: 1px 1px;
+    font-size: 12px;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px;
+    color: white;
+    width: 40px;
+    height: 20px;
+    vertical-align: top;
+    margin: 0 1px;
+}
+
+/* 操作按钮样式 */
+.action-btn-edit {
+    background-color: #007bff;
+}
+
+.action-btn-delete {
+    background-color: #dc3545;
+}
+
+.action-btn-copy {
+    background-color: #28a745;
+}
+
+.action-btn-update {
+    background-color: rgb(238, 180, 7);
+}
+
+/* 操作按钮容器样式 */
+.action-buttons-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    justify-content: flex-start;
+}
+
+.action-buttons-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    justify-content: flex-start;
+}
+
+
+.btn-addindex {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-right: 5px;
+    /* width: 60px; */
+    height: 35px;
+}
+
+.btn-addindex:hover {
+    background-color: #0056b3;
+}
+
+
+.btn-cancel {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-confirm {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+
+.main-container {
+    padding: 10px;
+}
+
+.button-container {
+    margin-bottom: 10px;
+}
+
+.grid-container {
+    height: 700px;
+    width: 100%;
+}
+
+/* 弹出层样式 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content-indexmanage {
+    background-color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    width: 900px;
+    max-height: 80vh;
+    overflow: auto;
+}
+
+/* 表单样式 */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+}
+
+.form-label {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.form-input {
+    width: 100%;
+    padding: 3px;
+    margin-top: 2px;
+    font-size: 12px;
+}
+
+.form-textarea {
+    width: 100%;
+    padding: 3px;
+    margin-top: 2px;
+    font-size: 12px;
+}
+
+.form-select {
+    width: 100%;
+    padding: 3px;
+    margin-top: 2px;
+    font-size: 12px;
+}
+
+.required-field {
+    color: red;
+}
+
+.textarea-full-width {
+    grid-column: span 3;
+}
+
+.button-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.button-group1 {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+/* 快捷新增计算指标样式 */
+.quick-calc-indicator-box {
+    border: 1px solid #ddd;
+    padding: 5px 15px;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+}
+
+.quick-calc-indicator-title {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+}
+
+.quick-calc-help-text {
+    margin-bottom: 15px;
+    font-size: 12px;
+    color: #666;
+    padding: 8px;
+    background-color: #f0f8ff;
+    border: 1px solid #cce7ff;
+    border-radius: 4px;
+}
+
+.index-delete-input {
+    margin-left: 80px;
+    margin-right: 10px;
+    padding: 5px;
+    width: 250px;
+    font-size: 12px;
+}
+
+.btn-delindexdata {
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-right: 5px;
+    background-color: #dc3545;
+    height: 35px;
+}
+
+/* 预览数据弹出层样式 */
+.preview-modal-content {
+    width: 900px;
+    max-height: 600px;
+}
+
+.preview-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.preview-modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+
+.preview-modal-close-btn:hover {
+    color: #333;
+}
+
+.preview-modal-body {
+    display: flex;
+    gap: 2px;
+    height: 530px;
+}
+
+.preview-grid-container {
+    flex: 0 0 220px;
+    height: 100%;
+}
+
+.preview-chart-container {
+    flex: 1;
+    height: 100%;
+}

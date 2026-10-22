@@ -1,0 +1,78 @@
+.time_table.slice_container {
+  overflow: auto !important;
+}
+
+.font_weight_normal {
+  font-weight: normal;
+}
+
+.font_weight_bold{
+  font-weight: bold;
+}
+
+.font_weight_inherit {
+  font-weight: inherit;
+}
+
+.timetable {
+    --bs-table-bg: transparent;
+    width: 99%;
+    margin-bottom: 10px;
+}
+
+.time_table .timetable thead th {
+    font-weight: 700;
+}
+
+.time_table .timetable {
+    font-size: min(0.88vw, 14px) !important;
+}
+
+.time_table .timetable thead .app-table-header-sortable {
+    font-weight: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    padding: 0 12px 0 0;
+}
+
+.time-table-description {
+    white-space: pre-line;
+}
+
+ .tooltip_timetable{
+ position: absolute;
+background-color: white;
+color: rgb(102, 102, 102);
+padding: 0.3rem 0.5rem;
+border-radius: 3px;
+margin-top: -30px;
+font-size: 14px;
+box-shadow: rgba(33, 33, 33, 0.2) 0px 1px 2px;
+line-height: 1em;
+pointer-events: none;
+  }
+
+ .d3-tip-timetable {
+line-height: 0.8em;
+font-weight: bold;
+padding: 8px;
+font-size: 14px;
+background-color: white;
+box-shadow: rgba(33, 33, 33, 0.2) 0px 1px 2px;
+color: rgb(102, 102, 102);
+border-radius: 3px;
+}
+
+.time_table .app-table-header-sortable::after {
+  right: 5%;
+}
+
+.time_table .app-table-header-sort-asc,
+.time_table .app-table-header-sort-desc {
+  background-color: white !important;
+  border-bottom: 3px solid #ef8200;
+}
+
+.metric-hover:hover {
+  font-weight: bold;
+}

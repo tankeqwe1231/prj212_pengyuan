@@ -1,0 +1,471 @@
+/* 主容器 */
+.home-page-container {
+  width: 100%;
+  padding: 20px;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+/* 第一行：上涨品种、下跌品种、涨跌差、当前时间 */
+.top-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  height: 180px;
+}
+
+/* 图表卡片 */
+.chart-card {
+  flex: 1;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.card-title {
+  font-size: 14px;
+  color: #666;
+  font-weight: normal;
+}
+
+.card-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+}
+
+.rise-card .card-value {
+  color: #ef5350;
+}
+
+.fall-card .card-value {
+  color: #66bb6a;
+}
+
+.diff-card .card-value {
+  color: #42a5f5;
+}
+
+.card-chart {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 当前时间卡片 */
+.time-card {
+  width: 250px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+}
+
+.time-label {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-bottom: 15px;
+}
+
+.time-value {
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* 主内容区：左右布局 */
+.main-content {
+  display: flex;
+  gap: 20px;
+}
+
+/* 左侧 65% */
+.left-section {
+  flex: 0 0 65%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 右侧 35% */
+.right-section {
+  flex: 0 0 calc(35% - 20px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 通用区块卡片 */
+.section-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.section-icon {
+  font-size: 20px;
+  margin-right: 8px;
+}
+
+.home-page-container .section-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  flex: 1;
+}
+
+.view-more {
+  font-size: 14px;
+  color: #42a5f5;
+  text-decoration: none;
+}
+
+.view-more:hover {
+  text-decoration: underline;
+}
+
+.warn-count {
+  font-size: 12px;
+  color: #999;
+  text-decoration: none;
+}
+
+.section-content {
+  overflow-y: auto;
+}
+
+/* 核心品种观点 */
+.core-views-card {
+  height: 500px;
+}
+
+.core-views-card .section-content {
+  max-height: 420px;
+}
+
+.view-item {
+  padding: 15px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.view-item:hover {
+  background-color: #f9f9f9;
+}
+
+.view-item:last-child {
+  border-bottom: none;
+}
+
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.view-tag {
+  /* background-color: #ffeaa7; */
+  color: #333;
+  padding: 3px 0px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.view-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.view-title {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.view-date {
+  /* display: flex; */
+  /* align-items: start; */
+  margin-left: 10px;
+  font-size: 12px;
+  color: #999;
+}
+
+/* .view-variety {
+  width: 90px;
+} */
+
+.view-public-date {
+  margin-left: 15px;
+}
+
+/* 品种涨跌热力图 */
+.treemap-card {
+  height: 820px;
+  padding-bottom: 5px;
+  display: flex;
+  flex-direction: column;
+}
+
+.treemap-card .section-header {
+  margin-bottom: 0px;
+  flex-shrink: 0;
+}
+
+.treemap-select {
+  padding: 5px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+}
+
+.treemap-select:focus {
+  border-color: #42a5f5;
+}
+
+.treemap-content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.treemap-container {
+  width: 100%;
+}
+
+/* 预警指标 */
+.alert-card {
+  height: 500px;
+}
+
+.alert-card .section-content {
+  max-height: 420px;
+}
+
+.alert-item {
+  padding: 10px;
+  border-left: 3px solid #ff6b6b;
+  background-color: #fff5f5;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.alert-label {
+  display: flex;
+  /* 一个靠左，一个靠右 */
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.alert-desc {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.alert-time {
+  font-size: 12px;
+  color: #999;
+}
+
+/* 新发布路演 */
+.roadshow-card {
+  height: 600px;
+}
+
+.roadshow-card .section-content {
+  max-height: 520px;
+}
+
+.roadshow-item {
+  padding: 15px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.roadshow-item:hover {
+  background-color: #f9f9f9;
+}
+
+.roadshow-item:last-child {
+  border-bottom: none;
+}
+
+.roadshow-tag {
+  /* background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); */
+  color: #333;
+  padding: 3px 0px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: bold;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+.roadshow-title {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.roadshow-date {
+  font-size: 12px;
+  color: #999;
+}
+
+/* 市场情绪 */
+.sentiment-card {
+  height: 200px;
+}
+
+.sentiment-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 0;
+}
+
+.sentiment-score {
+  font-size: 48px;
+  font-weight: bold;
+  /* color: #4caf50; */
+  margin-bottom: 0px;
+}
+
+.sentiment-label {
+  font-size: 14px;
+  color: #666;
+  margin-top: 5px;
+}
+
+.sentiment-bar {
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(to right, #f44336 0%, #ffeb3b 50%, #4caf50 100%);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.sentiment-progress {
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  background: rgba(255, 255, 255, 0.3);
+  transition: width 0.3s ease;
+}
+
+/* 响应式设计 */
+@media (max-width: 1400px) {
+  .main-content {
+    flex-direction: column;
+  }
+  
+  .left-section,
+  .right-section {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .top-row {
+    flex-wrap: wrap;
+    height: auto;
+  }
+  
+  .chart-card {
+    flex: 1 1 calc(50% - 10px);
+    min-width: 200px;
+    height: 180px;
+  }
+  
+  .time-card {
+    flex: 1 1 100%;
+    width: 100%;
+    height: 100px;
+  }
+  
+  .home-page-container {
+    padding: 10px;
+  }
+}
+
+/* 滚动条样式 */
+.section-content::-webkit-scrollbar,
+.treemap-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.section-content::-webkit-scrollbar-track,
+.treemap-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.section-content::-webkit-scrollbar-thumb,
+.treemap-content::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.section-content::-webkit-scrollbar-thumb:hover,
+.treemap-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* 空状态样式 */
+.view-item-empty,
+.roadshow-item-empty,
+.alert-item-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
+/* view-item点击效果 */
+.view-item {
+  cursor: pointer;
+}
+
+.roadshow-item {
+  cursor: pointer;
+}

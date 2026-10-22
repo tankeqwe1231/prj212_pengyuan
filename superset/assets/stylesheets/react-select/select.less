@@ -1,0 +1,58 @@
+.Select__control {
+  min-height: 30px;
+  border-color: #ccc;
+  border-radius: 4px;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
+}
+
+.Select__control--is-focused {
+  border-color: #66afe9;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075), 0 0 8px rgba(102, 175, 233, .6);
+}
+
+.Select__value-container {
+  padding: 0 8px;
+}
+
+.Select__input-container,
+.Select__placeholder,
+.Select__single-value {
+  margin: 0;
+}
+
+.Select__menu {
+  z-index: 1000;
+}
+
+.Select__multi-value {
+  margin: 2px;
+}
+
+.Select__option {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  min-height: 36px;
+  overflow: hidden;
+  padding: 0 .5rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.Select__option--is-focused {
+  background-color: rgba(0, 0, 0, .1) !important;
+}
+
+.Select__option--is-focused:hover {
+  cursor: pointer;
+}
+
+.Select__option[aria-disabled='true'] {
+  opacity: .5;
+}
+
+.Select__option--is-selected {
+  background-color: rgba(0, 0, 0, .08) !important;
+  color: inherit !important;
+  font-weight: bold;
+}

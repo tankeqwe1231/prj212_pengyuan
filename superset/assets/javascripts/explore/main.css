@@ -1,0 +1,861 @@
+.scrollbar-container {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+.scrollbar-content {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  overflow-y: auto;
+  margin-right: 0px;
+  margin-bottom: 40px;
+}
+
+.fave-unfave-icon, .edit-desc-icon {
+  padding: 0 0 0 .5em;
+  font-size: 14px;
+  color: #5b6fc0;
+}
+
+.fave-unfave-icon i,
+.edit-desc-icon i {
+  color: #5b6fc0;
+}
+
+#slice-header .badge.text-bg-warning {
+  color: #4a5cab !important;
+  background-color: #eef0f9 !important;
+}
+
+#explore-container .query-and-save,
+#slice-header .btn-group.results {
+  gap: 8px;
+}
+
+#explore-container .query-and-save > .btn,
+#slice-header .btn-group.results > .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  margin-left: 0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+  box-shadow: none;
+}
+
+#explore-container .query-and-save > .query {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #4f5fc4;
+  --bs-btn-border-color: #4f5fc4;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #4555b5;
+  --bs-btn-hover-border-color: #4555b5;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #4555b5;
+  --bs-btn-active-border-color: #4555b5;
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-disabled-bg: #c5cbe8;
+  --bs-btn-disabled-border-color: #c5cbe8;
+  --bs-btn-disabled-opacity: 1;
+}
+
+#explore-container .query-and-save > .savebtn,
+#slice-header .btn-group.results > .btn,
+.explore-query-modal .explore-query-modal__copy,
+#embed-code-popover .embed-code-popover__copy {
+  --bs-btn-color: #4a5cab;
+  --bs-btn-bg: #fff;
+  --bs-btn-border-color: #d5daf0;
+  --bs-btn-hover-color: #4555b5;
+  --bs-btn-hover-bg: #f4f6fd;
+  --bs-btn-hover-border-color: #5b6bcf;
+  --bs-btn-active-color: #4555b5;
+  --bs-btn-active-bg: #e8ebf8;
+  --bs-btn-active-border-color: #5b6bcf;
+  --bs-btn-disabled-color: #8e94ab;
+  --bs-btn-disabled-bg: #f7f8fc;
+  --bs-btn-disabled-border-color: #e1e4ec;
+}
+
+#explore-container .query-and-save > .btn:focus-visible,
+#slice-header .btn-group.results > .btn:focus-visible,
+.explore-query-modal .explore-query-modal__copy:focus-visible,
+#embed-code-popover .embed-code-popover__copy:focus-visible {
+  box-shadow: 0 0 0 3px rgba(91, 107, 207, 0.18);
+}
+
+#explore-container .query-and-save > .btn:disabled,
+#explore-container .query-and-save > .btn.disabled,
+#slice-header .btn-group.results > .btn.disabled {
+  cursor: not-allowed;
+}
+
+#slice-header .btn-group.results {
+  gap: 6px;
+  vertical-align: middle;
+}
+
+#slice-header .btn-group.results > .btn {
+  min-width: 32px;
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+.explore-query-modal .modal-content {
+  border: none;
+  border-radius: 10px;
+  background: #f5f5f5;
+  box-shadow: 0 12px 36px rgba(47, 51, 64, 0.18);
+}
+
+.explore-query-modal .modal-header {
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e8eaf0;
+}
+
+.explore-query-modal .modal-title {
+  color: #2f3340;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.explore-query-modal__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.explore-query-modal__title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #e8ebf8;
+  color: #5b6bcf;
+  font-size: 14px;
+}
+
+.explore-query-modal .btn-close {
+  border-radius: 6px;
+  opacity: 0.55;
+}
+
+.explore-query-modal .btn-close:hover {
+  background-color: #e8ebf8;
+  opacity: 0.9;
+}
+
+.explore-query-modal .modal-body {
+  padding: 20px 24px;
+}
+
+.explore-query-modal__content,
+.explore-query-modal__error {
+  border: 1px solid #e1e4ec;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.explore-query-modal__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e8eaf0;
+}
+
+.explore-query-modal .explore-query-modal__copy {
+  min-width: 30px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.explore-query-modal__content pre,
+.explore-query-modal__error {
+  max-height: 60vh;
+  overflow: auto;
+  color: #333;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.explore-query-modal__error {
+  margin: 0;
+  padding: 16px;
+}
+
+#embed-code-popover {
+  --bs-popover-bg: #f5f5f5;
+  --bs-popover-border-color: #e1e4ec;
+  border: 1px solid #e1e4ec;
+  border-radius: 10px;
+  background: #f5f5f5;
+  box-shadow: 0 8px 24px rgba(47, 51, 64, 0.14);
+}
+
+#embed-code-popover .popover-body {
+  padding: 16px;
+  color: #4a4f5c;
+  font-size: 13px;
+}
+
+#embed-code-popover .row {
+  --bs-gutter-x: 12px;
+  row-gap: 12px;
+}
+
+#embed-code-popover .embed-code-popover__code-row {
+  margin-bottom: 16px;
+}
+
+#embed-code-popover .embed-code-popover__copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+#embed-code-popover .form-control {
+  min-height: 34px;
+  padding: 7px 10px;
+  border-color: #e1e4ec;
+  border-radius: 6px;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+}
+
+#embed-code-popover textarea.form-control {
+  min-height: 96px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  line-height: 1.6;
+}
+
+#embed-code-popover .form-control:focus {
+  border-color: #5b6bcf;
+  box-shadow: 0 0 0 2px rgba(91, 107, 207, 0.12);
+}
+
+#embed-code-popover .form-label {
+  margin-bottom: 6px;
+  color: #4a4f5c;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.checkbox {
+    float: left;
+    margin-top: 0px;
+    margin-right: 3px;
+}
+
+/* Explore sections are intentionally flatter than regular Bootstrap cards.
+ * The section header provides the visual grouping while the controls remain
+ * in the existing card body so their behaviour and layout are unchanged. */
+#explore-container .tab-pane {
+  counter-reset: control-panel-section;
+}
+
+#explore-container .control-panel-section {
+  counter-increment: control-panel-section;
+  display: block;
+  margin: 15px 0 20px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background-color: #fff;
+}
+
+#explore-container > .row > .col-sm-4 {
+  background-color: #fff;
+}
+
+#explore-container .control-panel-section:last-child {
+  padding-bottom: 40px;
+}
+
+#explore-container .control-panel-section-header {
+  min-height: 28px;
+  padding: 0 20px;
+  border: 0;
+  background-color: #fff;
+}
+
+#explore-container .control-panel-section-titlebar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 28px;
+  color: #222;
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+#explore-container .control-panel-section-label {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+#explore-container .control-panel-section-label::before {
+  content: counter(control-panel-section);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  border-radius: 6px;
+  background-color: #f0f2fa;
+  color: #58668a;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+#explore-container .control-panel-section-rule {
+  flex: 1 1 auto;
+  height: 1px;
+  margin: 0 14px;
+  background-color: #e1e1e1;
+}
+
+#explore-container .control-panel-section .fa.expander {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  color: #a19f9d !important;
+  font-size: 14px;
+  line-height: 1;
+  text-align: center;
+  transform-origin: center;
+  transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+#explore-container .control-panel-section .fa.expander.expanded {
+  transform: rotate(90deg);
+}
+
+#explore-container .control-panel-section-header:hover .fa.expander {
+  background-color: #eef0f9;
+  color: #5b6fc0 !important;
+}
+
+#explore-container .fa.fa-edit.m-r-5,
+#explore-container .fa.fa-plus-square.m-r-5,
+#explore-container .fa.fa-minus-square.m-r-5 {
+  color: #5b6fc0;
+}
+
+#explore-container .nav.nav-tabs .nav-link:not(.active) {
+  color: #5b6fc0;
+}
+
+#explore-container .nav.nav-tabs .nav-item:has(> .nav-link.active) {
+  background-color: #eef0f9;
+}
+
+#explore-container .nav.nav-tabs .nav-link.active {
+  background-color: #eef0f9;
+  box-shadow: inset 0 3px 0 #5b6fc0;
+}
+
+#explore-container .badge.bg-secondary {
+  color: #4a5cab !important;
+  background-color: #eef0f9 !important;
+  border: 1px solid #d5daf0;
+}
+
+#explore-container .control-panel-section .list-group-item {
+  color: #4a5cab;
+  background-color: #eef0f9;
+  border-color: #d5daf0;
+}
+
+#explore-container .control-panel-section .list-group-item .fa-plus,
+#explore-container .control-panel-section .list-group-item .fa-bars,
+#explore-container .control-panel-section .list-group-item .fa-edit,
+#explore-container .collection-control-add-item .fa-plus-circle,
+#explore-container .echarts-option-add-item .fa-plus-circle {
+  color: #5b6fc0 !important;
+}
+
+.control-panel-section .Select-multi-value-wrapper .Select-input > input {
+  width: 100px;
+}
+
+.control-panel-section .metrics-select .Select-multi-value-wrapper .Select-input > input {
+  width: 300px;
+}
+
+.background-transparent {
+  background-color: transparent !important;
+}
+
+.viztype-label {
+  text-align: center;
+  font-size: 12px;
+}
+
+.viztype-selector-container {
+  cursor: pointer;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding: 5px;
+  border: 1px solid #aaa;
+}
+
+.viztype-selector-container:hover {
+  border: 1px solid #000;
+}
+
+.viztype-selector-container.selected {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.viztype-selector-container.selected {
+  cursor: not-allowed;
+  border: 1px solid #aaa;
+}
+
+.color-scheme-container {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+.color-scheme-container li {
+  flex-basis: 9px;
+  height: 10px;
+  margin: 9px 1px;
+}
+#explore-container .control-panel-section .card-body {
+  margin-left: 0;
+  padding: 10px 20px 0;
+  font-size: 14px;
+}
+.control-panel-section .form-label {
+  margin-bottom: 0px;
+}
+.fa.expander {
+  width: 15px;
+}
+.control-panel-section span.badge {
+  display: inline-block;
+  font-size: 14px;
+  line-height: 16px;
+}
+.input-inline {
+  float: left;
+  display: inline-block;
+  padding-right: 3px;
+}
+.input-inline .Select-control {
+  display: flex;
+}
+.input-inline .Select-control .Select-arrow-zone {
+  width: auto;
+  position: absolute;
+  right: 0;
+  top: 12px;
+}
+.save-modal-selector {
+  margin: 10px 0;
+}
+.list-group {
+  margin-bottom: 10px;
+}
+.color-popover.popover {
+  border: none;
+  background-color: transparent;
+}
+.color-popover .popover-body {
+  padding: 0;
+  background-color: transparent;
+}
+
+.type-label {
+  margin-right: 8px;
+  width: 30px;
+  display: inline-block;
+  text-align: center;
+  font-weight: bold;
+}
+
+.datasource-container {
+  overflow: auto;
+}
+
+/* Keep each regular Explore control compact and consistently spaced. */
+#explore-container .control-row {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 10px;
+  height: auto;
+  min-height: 50px;
+  margin-bottom: 10px;
+}
+
+#explore-container .control-row:not(:has(> [class*="col-"] > div:not([style*="display: none"]))) {
+  display: none;
+}
+
+#explore-container .control-row > [class*="col-"] {
+  flex: 1 1 140px;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  min-height: 50px;
+}
+
+#explore-container .control-row > [class*="col-"]:has(> div[style*="display: none"]) {
+  display: none;
+}
+
+#explore-container .control-row > [class*="col-"]:empty {
+  display: none;
+}
+
+#explore-container .control-row .ControlHeader {
+  height: 20px;
+  line-height: 20px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#explore-container .control-row .ControlHeader > .float-start,
+#explore-container .control-row .ControlHeader > .float-start .form-label {
+  height: 20px;
+  line-height: 20px;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#explore-container .collection-control-add-item,
+#explore-container .echarts-option-add-item {
+  margin-top: 5px;
+  line-height: 18px;
+}
+
+#explore-container .control-panel-section .css-b62m3t-container {
+  min-height: 30px;
+  height: auto;
+}
+
+#explore-container .control-panel-section .Select__control {
+  min-height: 30px;
+  height: 30px;
+}
+
+#explore-container .control-panel-section .Select__control:has(.Select__value-container--is-multi) {
+  height: auto;
+}
+
+#explore-container .control-panel-section .Select__control:has(.Select__value-container--is-multi:not(:has(.Select__multi-value))) {
+  height: 30px;
+}
+
+#explore-container .control-panel-section .form-control,
+#explore-container .control-panel-section .form-select {
+  min-height: 30px;
+  height: auto;
+  font-size: 14px;
+}
+
+#explore-container .control-panel-section input.form-control {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#explore-container .control-panel-section input.form-control::placeholder {
+  text-overflow: ellipsis;
+}
+
+#explore-container .control-panel-section .Select__value-container,
+#explore-container .control-panel-section .Select__indicators {
+  min-height: 28px;
+  height: 28px;
+}
+
+#explore-container .control-panel-section .Select__value-container--is-multi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  height: auto;
+  overflow: visible;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+#explore-container .control-panel-section .Select__value-container--is-multi:not(:has(.Select__multi-value)) {
+  height: 28px;
+}
+
+#explore-container .control-panel-section .Select__multi-value {
+  flex: 0 0 auto;
+  height: 24px;
+  align-items: center;
+  color: #4a5cab !important;
+  background-color: #eef0f9 !important;
+  border: 1px solid #d5daf0 !important;
+  font-size: 14px;
+}
+
+#explore-container .control-panel-section .Select__multi-value__label,
+#explore-container .control-panel-section .Select__multi-value__remove {
+  height: 24px;
+  color: #4a5cab !important;
+}
+
+#explore-container .control-panel-section .Select__multi-value__remove:hover {
+  background-color: transparent;
+  color: #4a5cab !important;
+}
+
+#explore-container .control-panel-section .Select__multi-value .badge.bg-secondary {
+  color: inherit !important;
+  background-color: transparent !important;
+  border: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+#explore-container .control-panel-section .Select__multi-value .option-label {
+  color: #4a5cab;
+}
+
+#explore-container .control-panel-section .Select__multi-value__label {
+  display: flex;
+  align-items: center;
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 24px;
+}
+
+#explore-container .control-panel-section .Select__single-value,
+#explore-container .control-panel-section .Select__placeholder,
+#explore-container .control-panel-section .Select__input-container,
+#explore-container .control-panel-section .Select__multi-value__label,
+#explore-container .control-panel-section .Select__option,
+#explore-container .control-panel-section .option-label {
+  font-size: 14px;
+}
+
+#explore-container .control-panel-section .Select__single-value,
+#explore-container .control-panel-section .Select__placeholder {
+  display: block;
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#explore-container .metrics-select .Select__value-container--is-multi {
+  min-width: 0;
+}
+
+#explore-container .metrics-select .Select__multi-value {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+#explore-container .metrics-select .Select__multi-value__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+}
+
+#explore-container .metrics-select .Select__multi-value__label > .badge {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+#explore-container .metrics-select .Select__multi-value__label > .badge > div {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+#explore-container .metrics-select .option-label {
+  display: inline-block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+#explore-container .tab-content  .card,
+#explore-container .chart-container > .card > .card-header,
+#explore-container .chart-container > .card > .card-body {
+  background-color: #fff;
+}
+
+/* Filter rows use their own compact layout instead of the legacy grid widths. */
+#explore-container .filter-control .filter-column-row,
+#explore-container .filter-control .filter-value-row,
+#explore-container .filter-control .filter-add-row {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+#explore-container .filter-control .filter-column-row {
+  margin-bottom: 10px;
+}
+
+#explore-container .filter-control .filter-column-col,
+#explore-container .filter-control .filter-operator-col,
+#explore-container .filter-control .filter-value-col,
+#explore-container .filter-control .filter-remove-col,
+#explore-container .filter-control .filter-add-col {
+  padding-left: 0;
+  padding-right: 8px;
+}
+
+#explore-container .filter-control .filter-value-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 8px;
+}
+
+#explore-container .filter-control .filter-operator-col {
+  flex: 1 1 80px;
+  width: auto;
+  min-width: 72px;
+  max-width: 100%;
+}
+
+#explore-container .filter-control .filter-value-col {
+  flex: 2 1 120px;
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#explore-container .filter-control .filter-value-col > div,
+#explore-container .filter-control .filter-value-col .css-b62m3t-container,
+#explore-container .filter-control .filter-value-col .Select__control,
+#explore-container .filter-control .filter-value-col .Select__value-container--is-multi {
+  max-width: 100%;
+  height: auto;
+  min-width: 0;
+}
+
+#explore-container .filter-control .filter-value-col .Select__control {
+  align-items: flex-start;
+}
+
+#explore-container .filter-control .filter-value-col .Select__value-container--is-multi {
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+#explore-container .filter-control .filter-value-col .Select__multi-value {
+  flex: 1 1 auto;
+  max-width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 24px;
+}
+
+#explore-container .filter-control .filter-value-col .Select__multi-value__label,
+#explore-container .filter-control .filter-value-col .Select__multi-value__remove {
+  height: auto;
+  min-height: 24px;
+}
+
+#explore-container .filter-control .filter-value-col .Select__multi-value__label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+#explore-container .filter-control .filter-remove-col {
+  flex: 0 0 36px;
+  width: 36px;
+  max-width: 36px;
+  padding-right: 0;
+}
+
+#explore-container .filter-control .filter-remove-col .btn {
+  width: 36px;
+}
+
+#explore-container .filter-control #remove-button,
+#explore-container .filter-control #add-button {
+  color: #4a5cab;
+  background-color: #eef0f9;
+  border: 1px solid #d5daf0;
+}
+
+#explore-container .filter-control #remove-button:hover,
+#explore-container .filter-control #remove-button:focus,
+#explore-container .filter-control #add-button:hover,
+#explore-container .filter-control #add-button:focus {
+  color: #4a5cab;
+  background-color: #e4e8f6;
+  border-color: #d5daf0;
+}
+
+#explore-container .filter-control #remove-button .fa,
+#explore-container .filter-control #add-button .fa {
+  color: #5b6fc0;
+}
+
+#explore-container .filter-control .filter-add-row {
+  margin-top: 10px;
+}
+
+#explore-container .filter-control .filter-add-col {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: none;
+  padding-right: 0;
+}
+
+#explore-container .filter-control #add-button {
+  width: auto;
+  min-width: 130px;
+  white-space: nowrap;
+  line-height: 20px;
+}

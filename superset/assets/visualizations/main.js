@@ -1,0 +1,92 @@
+/* eslint-disable global-require */
+import nvd3Vis from './nvd3_vis';
+import VIZ_TYPES from './vizTypes';
+
+// You ***should*** use these to reference viz_types in code
+export { VIZ_TYPES } from './vizTypes';
+
+const vizMap = {
+  [VIZ_TYPES.area]: nvd3Vis,
+  [VIZ_TYPES.bar]: nvd3Vis,
+  [VIZ_TYPES.big_number]: require('./big_number.js'),
+  [VIZ_TYPES.big_number_total]: require('./big_number.js'),
+  [VIZ_TYPES.box_plot]: nvd3Vis,
+  [VIZ_TYPES.bubble]: nvd3Vis,
+  [VIZ_TYPES.bullet]: nvd3Vis,
+  [VIZ_TYPES.cal_heatmap]: require('./cal_heatmap.js'),
+  [VIZ_TYPES.compare]: nvd3Vis,
+  [VIZ_TYPES.directed_force]: require('./directed_force.js'),
+  [VIZ_TYPES.chord]: require('./chord.jsx'),
+  [VIZ_TYPES.dist_bar]: nvd3Vis,
+  [VIZ_TYPES.filter_box]: require('./filter_box.jsx'),
+  [VIZ_TYPES.heatmap]: require('./heatmap.js'),
+  [VIZ_TYPES.histogram]: require('./histogram.js'),
+  [VIZ_TYPES.horizon]: require('./horizon.js'),
+  [VIZ_TYPES.iframe]: require('./iframe.js'),
+  [VIZ_TYPES.line]: nvd3Vis,
+  [VIZ_TYPES.time_pivot]: nvd3Vis,
+  [VIZ_TYPES.mapbox]: require('./mapbox.jsx'),
+  [VIZ_TYPES.markup]: require('./markup.js'),
+  [VIZ_TYPES.para]: require('./parallel_coordinates.js'),
+  [VIZ_TYPES.pie]: nvd3Vis,
+  [VIZ_TYPES.pivot_table]: require('./pivot_table.js'),
+  [VIZ_TYPES.sankey]: require('./sankey.js'),
+  [VIZ_TYPES.separator]: require('./markup.js'),
+  [VIZ_TYPES.sunburst]: require('./sunburst.js'),
+  [VIZ_TYPES.table]: require('./table.js'),
+  [VIZ_TYPES.time_table]: require('./time_table.jsx'),
+  [VIZ_TYPES.treemap]: require('./treemap.js'),
+  [VIZ_TYPES.country_map]: require('./country_map.js'),
+  [VIZ_TYPES.word_cloud]: require('./word_cloud.js'),
+  [VIZ_TYPES.world_map]: require('./world_map.js'),
+  [VIZ_TYPES.dual_line]: nvd3Vis,
+  [VIZ_TYPES.event_flow]: require('./EventFlow.jsx'),
+  [VIZ_TYPES.paired_ttest]: require('./paired_ttest.jsx'),
+  [VIZ_TYPES.partition]: require('./partition.js'),
+  [VIZ_TYPES.deck_scatter]: require('./deckgl/layers/scatter.jsx').default,
+  [VIZ_TYPES.deck_screengrid]: require('./deckgl/layers/screengrid.jsx').default,
+  [VIZ_TYPES.deck_grid]: require('./deckgl/layers/grid.jsx').default,
+  [VIZ_TYPES.deck_hex]: require('./deckgl/layers/hex.jsx').default,
+  [VIZ_TYPES.deck_path]: require('./deckgl/layers/path.jsx').default,
+  [VIZ_TYPES.deck_geojson]: require('./deckgl/layers/geojson.jsx').default,
+  [VIZ_TYPES.deck_arc]: require('./deckgl/layers/arc.jsx').default,
+  [VIZ_TYPES.deck_polygon]: require('./deckgl/layers/polygon.jsx').default,
+  [VIZ_TYPES.deck_multi]: require('./deckgl/multi.jsx'),
+  [VIZ_TYPES.rose]: require('./rose.js'),
+  // user add
+  [VIZ_TYPES.echarts_funnel]: require('./echarts_funnel.js'),
+  [VIZ_TYPES.echarts_stat_line]: require('./echarts_stat_line.js'),
+  [VIZ_TYPES.echarts_stat_line_2]: require('./echarts_stat_line_2.js'),
+  [VIZ_TYPES.echarts_category_line]: require('./echarts_category_line.js'),
+  [VIZ_TYPES.echarts_correlation]: require('./echarts_correlation.js'),
+  [VIZ_TYPES.echarts_comparison]: require('./echarts_comparison.js'),
+  [VIZ_TYPES.echarts_bolling_bond]: require('./echarts_bolling_bond.js'),
+  [VIZ_TYPES.echarts_combine]: require('./echarts_combine.js'),
+  [VIZ_TYPES.echarts_scatter]: require('./echarts_scatter.js'),
+  [VIZ_TYPES.echarts_events]: require('./echarts_events.js'),
+  [VIZ_TYPES.echarts_world_flow]: require('./echarts_world_flow.js'),
+  [VIZ_TYPES.echarts_yoy_and_mom]: require('./echarts_yoy_and_mom.js'),
+  [VIZ_TYPES.echarts_periodogram]: require('./echarts_periodogram.js'),
+  [VIZ_TYPES.echarts_analysis_pie]: require('./echarts_analysis_pie.js'),
+  [VIZ_TYPES.echarts_dynamic_line_chart]: require('./echarts_dynamic_line_chart.js'),
+  [VIZ_TYPES.echarts_thermodynamic_chart]: require('./echarts_thermodynamic_chart.js'),
+  [VIZ_TYPES.echarts_dist_combine]: require('./echarts_dist_combine.js'),
+  [VIZ_TYPES.highcharts_candle_stick]: require('./highcharts_candle_stick.js'),
+  [VIZ_TYPES.excel_view]: require('./excel_view.js'),
+  [VIZ_TYPES.html_set]: require('./html_set.js'),
+  [VIZ_TYPES.echarts_season_lunar_calendar]: require('./echarts_season_lunar_calendar.js'),
+  [VIZ_TYPES.echarts_radar]: require('./echarts_radar.js'),
+  [VIZ_TYPES.ckeditor_slice]: require('./ckeditor_slice.js'),
+  [VIZ_TYPES.echarts_multiple_y]: require('./echarts_multiple_y.js'),
+  [VIZ_TYPES.echarts_share_data]: require('./echarts_share_data.js'),
+  [VIZ_TYPES.ag_grid]: require('./ag_grid.js'),
+  [VIZ_TYPES.echarts_bubble]: require('./echarts_bubble.js'),
+  [VIZ_TYPES.filter_box_min]: require('./filter_box_min.jsx'),
+};
+
+Object.keys(vizMap).forEach((vizType) => {
+  const vizModule = vizMap[vizType];
+  vizMap[vizType] = vizModule && vizModule.default ? vizModule.default : vizModule;
+});
+
+export default vizMap;

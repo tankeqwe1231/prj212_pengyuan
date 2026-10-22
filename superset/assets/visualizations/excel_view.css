@@ -1,0 +1,8 @@
+.widget.pivot_table tr > th,
+.widget.pivot_table tr > td {
+  padding: 1px 5px;
+}
+
+table.dataTable.table-condensed > thead > tr > th {
+    padding-right: 40px;
+}

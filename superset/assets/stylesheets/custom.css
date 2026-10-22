@@ -1,0 +1,689 @@
+/*左侧菜单*/
+.sidebar-menu{
+    /*background-color: #022a4b;*/
+    padding: 0px;
+    font-weight: 100;
+}
+.sidebar-menu-mac{
+    /*background-color: #022a4b;*/
+    padding: 0px;
+}
+/*三级菜单*/
+.menu-first{
+    height:45px;
+    line-height:45px;
+    /* background-color: #e9e9e9; */
+    /* border-top: 1px solid #efefef; */
+    /* border-bottom: 1px solid #e1e1e1; */
+    padding: 0;
+    font-size: 18px;
+    /*font-weight: normal;*/
+    text-align: center;
+}
+/*三级菜单鼠标划过状态*/
+.sidebar-menu-mac .menu-first:hover,
+.sidebar-menu-mac .menu-first:focus{
+    background-color: #353D47;
+    background-image: linear-gradient(#EF8200, #EF8200);
+    background-position: bottom;
+    background-repeat: no-repeat;
+    background-size: 100% 3px;
+    color:#EF8200!important;
+    font-weight: inherit;
+}
+
+/*三级菜单鼠标划过状态*/
+.menu-first:hover,
+.menu-first:focus{
+    background-color: #353D47;
+    background-image: linear-gradient(#EF8200, #EF8200);
+    background-position: bottom;
+    background-repeat: no-repeat;
+    background-size: 100% 3px;
+    color:#EF8200!important;
+    font-weight: inherit;
+}
+
+/*三级菜单鼠标划过状态*/
+.activate-third{
+    /*background-color: #353D47;*/
+    color:#EF8200!important;
+    /*border-bottom: 3px solid #EF8200;*/
+    /*font-weight: 300;*/
+}
+
+/*四级菜单*/
+.menu-second li a{
+    height:31px;
+    line-height:31px;
+    /* border-top: 1px solid #efefef; */
+    border-bottom: 1px solid #a09898;
+    font-size: 12px;
+    text-align:center;
+}
+/*四级菜单*/
+.menu-second {
+    background-color: #02203b;
+}
+
+/* Bootstrap 5 的 .nav 默认是可换行 flex，侧栏必须保持纵向列表。 */
+.sidebar-menu .menu-first,
+.sidebar-menu-mac .menu-first {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin-left: 0;
+    padding: 0 10px;
+    text-align: left;
+}
+
+.sidebar-nav {
+    display: block;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.sidebar-nav > li {
+    display: block;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-nav > li > a {
+    display: block;
+    width: 100%;
+    margin-left: 0;
+    text-align: left;
+}
+
+/*四级菜单鼠标划过样式*/
+.menu-second li a:hover,
+.menu-second li a:focus {
+    color: #EF8200 !important;
+    border-bottom: 3px solid #EF8200;
+    background-color: #353D47;
+    font-weight: 300;
+}
+
+
+/*四级菜单id和url路径dashboard id 一致时的样式*/
+.menu-second li a.activate-dash {
+    color: #EF8200 !important;
+    border-bottom: 3px solid #EF8200;
+}
+
+
+/* Bootstrap 5 React 页面导航覆盖 */
+.sidebar-nav,.sidebar-nav li a{
+    padding: 0px;
+    margin: 0px;
+    /*font-size:15px;*/
+    text-align:left;
+    /*text-indent:45px;*/
+    font-size:.82vw;
+    /*font-size:14px;*/
+    text-indent:1.8vw;
+}
+.client-navbar {
+  border: 0 solid #353D47;
+  /*z-index: 999;*/
+  margin-bottom: 0px;
+  background-color: #02203b;
+  min-height: 60px;
+  height: auto;
+}
+
+.client-navbar {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.client-navbar .navbar-collapse {
+    background-color: #02203b;
+}
+@media (min-width: 768px) {
+  .client-navbar > .container .navbar-brand,
+  .client-navbar > .container-fluid .navbar-brand {
+    margin-left: 0px;
+    margin-right: 40px;
+    margin-top: -2px;
+  }
+}
+
+.client-navbar #navbar {
+  margin-left: 0;
+}
+@media (min-width: 768px) {
+  .client-navbar > .container > .navbar-collapse,
+  .client-navbar > .container-fluid > .navbar-collapse {
+    margin-right: 0;
+    margin-left: 0;
+    background-color: #02203b;
+    min-width: 0;
+    min-height: 60px;
+    height: auto;
+    flex-wrap: wrap;
+  }
+}
+
+.top .container-fluid{
+    height: inherit;
+}
+/*input[type="button"].btn-block {*/
+/*  width: 100%;*/
+/*  background-color: #353D47;*/
+/*}*/
+/* .btn-primary {
+  color: #fff;
+  background-color: #353D47;
+  border-color: #353D47;
+}
+.btn-primary:hover {
+  color: #fff;
+  background-color: #353D47;
+  border-color: #353D47;
+    font-weight: 300;
+} */
+
+.sidebar-menu a {
+  color: white;
+  text-decoration: none;
+  margin-left:10px;
+  font-size: 1vw;
+}
+
+.sidebar-menu-mac a {
+  color: white;
+  text-decoration: none;
+  margin-left:10px;
+  font-size: 1vw;
+}
+
+.col-sm-1-8 {
+    width: 12.5%;
+}
+
+.col-sm-7-8 {
+    width: 87.5%;
+}
+
+div#sidebar {
+    /*height: 110%;*/
+    background-color: #022a4b;
+    border-top: solid 1px #445056;
+}
+
+
+.client-navbar .navbar-nav .nav-link {
+    color: #FFF;
+    /*padding: 10px 8px;*/
+    padding-right: 8px;
+    padding-left: 8px;
+    font-size: .83vw;
+}
+
+
+
+.client-navbar .navbar-nav .nav-link:hover,
+.client-navbar .navbar-nav .nav-link:focus {
+    color: #EF8200;
+    border-bottom: 0;
+    background-image: linear-gradient(#EF8200, #EF8200);
+    background-position: bottom;
+    background-repeat: no-repeat;
+    background-size: 100% 3px;
+    font-weight: inherit;
+}
+
+.top-mac .client-navbar .navbar-nav .nav-link:hover,
+.top-mac .client-navbar .navbar-nav .nav-link:focus {
+    color: #EF8200;
+    border-bottom: 0;
+    font-weight: inherit;
+}
+
+.sidebar-menu-mac .client-navbar .navbar-nav .nav-link:hover,
+.sidebar-menu-mac .client-navbar .navbar-nav .nav-link:focus {
+    color: #EF8200;
+    border-bottom: 0;
+}
+
+.client-navbar .navbar-nav.ms-auto {
+    padding-right: 20px;
+}
+
+.client-navbar .navbar-nav.ms-auto {
+    height: 60px;
+    align-items: center;
+    padding-right: 12px;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.client-navbar .navbar-nav.ms-auto > .nav-item {
+    display: flex;
+    align-items: center;
+    height: 60px;
+    flex: 0 0 auto;
+}
+
+/* 右侧操作换行后，移除空白占位导航的自动外边距，保持左侧菜单位置不变。 */
+.client-navbar.navbar-actions-wrapped #react-client-navbar > .navbar-nav:first-child {
+    margin-right: 0 !important;
+}
+
+/*一级菜单 鼠标左键按下触发以下样式*/
+.client-navbar .navbar-nav .nav-link:active {
+  background-color:#011b32;
+    color: #EF8200;
+    border-bottom: 0;
+    background-image: linear-gradient(#EF8200, #EF8200);
+    background-position: bottom;
+    background-repeat: no-repeat;
+    background-size: 100% 3px;
+}
+
+/*一级菜单激活样式*/
+.client-navbar .navbar-nav .nav-link.activate-top {
+  /*background-color:#011b32;*/
+    color: #EF8200;
+    /*border-bottom:solid #EF8200;*/
+    /*font-weight: 300;*/
+}
+
+.client-navbar .navbar-nav .dropdown.show > .nav-link,
+.client-navbar .navbar-nav .dropdown.show > .nav-link:hover,
+.client-navbar .navbar-nav .dropdown.show > .nav-link:focus {
+    background-color: #011b32;
+    color: #fff;
+    font-weight: inherit;
+}
+
+/*二级菜单*/
+.client-navbar .dropdown-menu .dropdown-item {
+
+    color: #fff;
+    font-size: .8vw;
+}
+
+/*二级菜单*/
+.client-navbar .dropdown-menu .dropdown-item:hover {
+    background-color:#EF8200;
+    font-weight: 300;
+}
+
+/*二级菜单*/
+.client-navbar .dropdown-menu .dropdown-item.activate-second {
+    /*background-color:#EF8200;*/
+    color: #EF8200;
+    /*font-weight: 300;*/
+}
+
+/*二级菜单下拉框背景*/
+.client-navbar .dropdown-menu{
+  background-color:#022a4b;
+}
+
+
+.fa-caret-down:before{content:"\f054"}
+
+
+header.top{
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    font-weight: 100;
+}
+
+header.top-mac{
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+}
+
+.row-custom .row-main-container{
+    margin-top: 60px;
+    margin-left: 240px;
+}
+
+.sidebar-fixed{
+    position: fixed;
+    /*width: 240px;*/
+    width: inherit;
+    font-size: 14px;
+    overflow: auto;
+    padding-bottom: 70px;
+    /*margin-top: 60px;*/
+}
+
+.row-custom .sidebar-fixed{
+    position: fixed;
+    width: 12vw;
+    font-size: 14px;
+    overflow: auto;
+    padding-bottom: 70px;
+    /*padding-top: 60px;*/
+}
+
+#SplitPaneDom{
+    padding-top: 80px;
+}
+
+header.top + .container{
+    margin-top: 60px;
+}
+
+header.top-mac + .container{
+    margin-top: 60px;
+}
+
+
+.sidebar-fixed::-webkit-scrollbar {
+    width: 3px;
+}
+/* 由 JS 在指针靠近右侧滚动条时切换 .sidebar-scrollbar-wide */
+.sidebar-fixed.sidebar-scrollbar-wide::-webkit-scrollbar {
+    width: 8px;
+}
+.sidebar-fixed::-webkit-scrollbar-thumb {
+    background: #F90;
+    border-radius: 10px;
+}
+.sidebar-fixed::-webkit-scrollbar-track {
+      border-radius: 0;
+      background: rgba(0,0,0,0.1);
+}
+
+.Resizer {
+    background: #000;
+    opacity: .2;
+    z-index: 1;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    -moz-background-clip: padding;
+    -webkit-background-clip: padding;
+    background-clip: padding-box;
+}
+
+.Resizer:hover {
+    -webkit-transition: all 2s ease;
+    transition: all 2s ease;
+}
+
+/* 命中区只向右（主内容侧）扩展，避免覆盖侧栏滚动条 */
+.Resizer.vertical {
+    width: 6px;
+    margin: 0 -5px 0 0;
+    border-left: 0;
+    border-right: 5px solid rgba(255, 255, 255, 0);
+    cursor: col-resize;
+}
+
+.Resizer.vertical:hover {
+    border-left: 0;
+    border-right: 5px solid rgba(0, 0, 0, 0.5);
+}
+.Resizer.disabled {
+    cursor: not-allowed;
+}
+.Resizer.disabled:hover {
+    border-color: transparent;
+}
+
+/*  split控件flex布局，图表区域很宽时导致配置项区域很宽  */
+#SplitPaneDom #explore-container > div > div.col-sm-4 {
+max-width: 565px;
+}
+
+#uncontrolled-tab-example div.react-bs-container-body {
+    overflow: auto;
+}
+#pop-search-slices .Select-menu-outer {
+    max-height: 273px;
+}
+#pop-search-slices .Select-menu {
+    max-height: 273px;
+}
+#pop-search-slices .popover-body {
+    padding: 2px;
+}
+
+/* 研报和路演圆角矩形按钮 */
+.client-navbar #reports-show-pdf > a,
+.client-navbar #reports-show-video > a {
+    background-color: rgba(255, 255, 255, 0.2);
+    /* border: 1px solid rgba(255, 255, 255, 0.2); */
+    border-bottom: 0px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 2px 10px !important;
+    height: 28px;
+    margin-top: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: normal;
+    font-size: 16px;
+    font-weight: 400;
+}
+
+.client-navbar #reports-show-pdf > a {
+    margin-right: 6px;
+}
+
+.client-navbar #reports-show-pdf > a:hover,
+.client-navbar #reports-show-video > a:hover,
+.client-navbar #reports-show-pdf > a:focus,
+.client-navbar #reports-show-video > a:focus {
+    background-color: rgba(255, 255, 255, 0.25);
+    background-image: none;
+    color: #FFF;
+}
+
+/* 收藏菜单由 React 异步填充，条目使用 Bootstrap 5 dropdown-item 结构。 */
+.client-navbar #myFavorites {
+    min-width: 260px;
+    max-width: 420px;
+    padding: 0;
+    overflow: hidden;
+    background-color: #022a4b;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0;
+    margin-top: -6px;
+}
+
+.client-navbar #user-dropdown {
+    margin-top: -6px;
+}
+
+.client-navbar #myFavorites > li {
+    width: 100%;
+}
+
+.client-navbar #myFavorites .dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 8px 16px;
+    overflow: hidden;
+    color: #fff;
+    font-size: 14px;
+    line-height: 22px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.client-navbar #myFavorites .dropdown-item:hover,
+.client-navbar #myFavorites .dropdown-item:focus {
+    color: #fff;
+    background-color: #EF8200;
+}
+
+/* Monitor popover shared by the FAB and React navigation bars. */
+#pop-myMonitors {
+  --bs-popover-bg: #f5f5f5;
+  --bs-popover-border-color: #e1e4ec;
+  padding: 0;
+  color: #4a4f5c;
+  border: 1px solid #e1e4ec;
+  border-radius: 10px;
+  background-color: #f5f5f5;
+  box-shadow: 0 8px 24px rgba(47, 51, 64, 0.14);
+}
+
+#pop-myMonitors .popover-body {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  color: #4a4f5c;
+  font-size: 13px;
+}
+
+#pop-myMonitors .nav-tabs {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-left: 0;
+  margin-bottom: 0;
+  list-style: none;
+  border-bottom: 0;
+}
+
+#pop-myMonitors .nav-tabs > .nav-item {
+  display: list-item;
+  margin: 0;
+}
+
+#pop-myMonitors .nav-tabs .nav-link {
+  display: block;
+  padding: 7px 14px;
+  margin: 0;
+  color: #4a4f5c;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  background: #fff;
+  border: 1px solid #e1e4ec;
+  border-radius: 6px;
+}
+
+#pop-myMonitors .nav-tabs .nav-link:hover,
+#pop-myMonitors .nav-tabs .nav-link:focus {
+  color: #4555b5;
+  background-color: #f4f6fd;
+  border-color: #d5daf0;
+}
+
+#pop-myMonitors .nav-tabs .nav-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(91, 107, 207, 0.18);
+}
+
+#pop-myMonitors .nav-tabs .nav-link.active {
+  color: #4555b5;
+  background-color: #e8ebf8;
+  border-color: #5b6bcf;
+}
+
+#pop-myMonitors .tab-content {
+  flex: 1;
+  min-height: 0;
+  margin-top: 12px;
+}
+
+#pop-myMonitors .tab-pane {
+  height: 100%;
+}
+
+#pop-myMonitors .table-responsive {
+  height: 100%;
+  overflow: auto;
+  border: 1px solid #e1e4ec;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+#pop-myMonitors table {
+  --bs-table-bg: #fff;
+  --bs-table-color: #4a4f5c;
+  --bs-table-hover-bg: #f4f6fd;
+  --bs-table-hover-color: #2f3340;
+  margin-bottom: 0;
+  color: #4a4f5c;
+  font-size: 13px;
+  line-height: 1.6;
+  border-color: #e8eaf0;
+}
+
+#pop-myMonitors table > thead > tr > th,
+#pop-myMonitors table > tbody > tr > td {
+  padding: 9px 12px;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid #e8eaf0;
+}
+
+#pop-myMonitors table > thead > tr > th {
+  color: #4a4f5c;
+  font-weight: 600;
+  background-color: #f7f8fc;
+}
+
+#pop-myMonitors table > tbody > tr:last-child > td {
+  border-bottom: 0;
+}
+
+#pop-myMonitors table a {
+  color: #5b6bcf;
+  text-decoration: none;
+}
+
+#pop-myMonitors table a:hover {
+  color: #4555b5;
+  text-decoration: underline;
+}
+
+#pop-myMonitors table a:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid #5b6bcf;
+  outline-offset: 2px;
+}
+
+#pop-myMonitors .popover-arrow {
+  display: block;
+  width: 16px;
+  height: 8px;
+}
+
+#pop-myMonitors.bs-popover-bottom > .popover-arrow {
+  top: -8px;
+}
+
+#pop-myMonitors.bs-popover-bottom > .popover-arrow::before,
+#pop-myMonitors.bs-popover-bottom > .popover-arrow::after {
+  position: absolute;
+  display: block;
+  content: "";
+  border-color: transparent;
+  border-style: solid;
+  border-width: 0 8px 8px;
+}
+
+#pop-myMonitors.bs-popover-bottom > .popover-arrow::before {
+  top: 0;
+  border-bottom-color: #e1e4ec;
+}
+
+#pop-myMonitors.bs-popover-bottom > .popover-arrow::after {
+  top: 1px;
+  border-bottom-color: #f5f5f5;
+}
+

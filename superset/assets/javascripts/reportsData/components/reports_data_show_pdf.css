@@ -1,0 +1,295 @@
+/* ===================PDF弹出层样式=================== */
+
+/* 遮罩层 */
+.rds-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+/* PDF弹出层 */
+.rds-pdf-modal {
+  width: 90vw;
+  height: 90vh;
+  background: white;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.rds-pdf-modal-header {
+  padding: 5px 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rds-pdf-modal-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+.rds-pdf-modal-close {
+  background: none;
+  border: none;
+  font-size: 32px;
+  line-height: 1;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.rds-pdf-modal-close:hover {
+  color: #666;
+}
+
+.rds-pdf-modal-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.rds-pdf-modal-left {
+  flex: 1 1 auto;
+  border-right: 1px solid #eee;
+  overflow: hidden;
+  min-width: 0;
+  /* transition: flex-basis 0.25s ease; */
+
+}
+
+.rds-pdf-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.rds-pdf-modal-right {
+  flex: 0 0 30%;
+  overflow-y: auto;
+  background: #f9f9f9;
+  /* transition: flex-basis 0.25s ease, width 0.25s ease, padding 0.25s ease; */
+}
+
+/* 类似 antd 的 Splitter 折叠条 */
+.rds-pdf-modal-splitter {
+  flex: 0 0 6px;
+  position: relative;
+  background: #f0f0f0;
+  border-left: 1px solid #eee;
+  border-right: 1px solid #eee;
+  cursor: default;
+  user-select: none;
+}
+
+.rds-pdf-modal-splitter-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 48px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #fff;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  z-index: 1;
+}
+
+.rds-pdf-modal-splitter-btn:hover {
+  color: #1890ff;
+  border-color: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.25);
+}
+
+/* AI摘要折叠状态 */
+.rds-pdf-modal-content-collapsed .rds-pdf-modal-right {
+  flex: 0 0 0;
+  width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: none;
+}
+
+.rds-pdf-modal-content-collapsed .rds-pdf-modal-left {
+  border-right: none;
+}
+
+.rds-pdf-modal-ai-section {
+  padding: 20px;
+}
+
+.rds-pdf-modal-ai-title {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+.rds-pdf-modal-ai-content {
+  min-height: 100px;
+}
+
+.rds-pdf-modal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.rds-pdf-modal-loading .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #42a5f5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.rds-pdf-modal-loading p {
+  margin: 5px 0;
+}
+
+.rds-pdf-modal-loading .countdown {
+  font-size: 14px;
+  color: #42a5f5;
+  font-weight: bold;
+}
+
+.rds-pdf-modal-empty {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+}
+
+.rds-pdf-modal-markdown {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #333;
+}
+
+.rds-pdf-modal-markdown h1,
+.rds-pdf-modal-markdown h2,
+.rds-pdf-modal-markdown h3,
+.rds-pdf-modal-markdown h4,
+.rds-pdf-modal-markdown h5,
+.rds-pdf-modal-markdown h6 {
+  margin: 20px 0 10px 0;
+  font-weight: bold;
+}
+
+.rds-pdf-modal-markdown h1 {
+  font-size: 24px;
+}
+
+.rds-pdf-modal-markdown h2 {
+  font-size: 20px;
+}
+
+.rds-pdf-modal-markdown h3 {
+  font-size: 18px;
+}
+
+.rds-pdf-modal-markdown p {
+  margin: 10px 0;
+}
+
+.rds-pdf-modal-markdown ul,
+.rds-pdf-modal-markdown ol {
+  margin: 10px 0;
+  padding-left: 25px;
+}
+
+.rds-pdf-modal-markdown li {
+  margin: 5px 0;
+}
+
+.rds-pdf-modal-markdown code {
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.rds-pdf-modal-markdown pre {
+  background: #f5f5f5;
+  padding: 15px;
+  border-radius: 5px;
+  overflow-x: auto;
+}
+
+.rds-pdf-modal-markdown blockquote {
+  border-left: 4px solid #42a5f5;
+  padding-left: 15px;
+  margin: 15px 0;
+  color: #666;
+}
+
+/* 响应式适配 */
+@media (max-width: 1200px) {
+  .rds-pdf-modal {
+    width: 95vw;
+    height: 95vh;
+  }
+  
+  .rds-pdf-modal-right {
+    flex: 0 0 35%;
+  }
+}
+
+@media (max-width: 768px) {
+  .rds-pdf-modal {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+  }
+  
+  .rds-pdf-modal-content {
+    flex-direction: column;
+  }
+  
+  .rds-pdf-modal-left,
+  .rds-pdf-modal-right {
+    flex: 1 1 auto;
+    border: none;
+  }
+
+  .rds-pdf-modal-splitter {
+    display: none;
+  }
+}

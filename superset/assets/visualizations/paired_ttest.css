@@ -1,0 +1,67 @@
+.paired_ttest .scrollbar-container {
+  overflow: scroll;
+}
+
+.paired-ttest-table .scrollbar-content {
+  padding-left: 5px;
+  padding-right: 5px;
+  margin-bottom: 0;
+}
+
+.paired-ttest-table h1 {
+  margin-left: 5px;
+}
+
+.paired-ttest-table tbody tr,
+.paired-ttest-table .app-table-header-sortable {
+  -webkit-transition: ease-in-out 0.1s;
+  transition: ease-in-out 0.1s;
+}
+
+.paired-ttest-table tbody tr:hover {
+  background-color: #e0e0e0;
+}
+
+.paired-ttest-table tbody tr .false {
+  color: #f44336;
+}
+
+.paired-ttest-table tbody tr .true {
+  color: #4caf50;
+}
+
+.paired-ttest-table tbody tr .control {
+  color: #2196f3;
+}
+
+.paired-ttest-table tbody tr .invalid {
+  color: #ff9800;
+}
+
+.paired-ttest-table tbody .control td {
+  background-color: #eeeeee;
+}
+
+.paired-ttest-table .app-table-header-sortable:hover,
+.paired-ttest-table .app-table-header-sortable:focus,
+.paired-ttest-table .app-table-header-sort-asc,
+.paired-ttest-table .app-table-header-sort-desc {
+  background-color: #e0e0e0;
+  position: relative;
+}
+
+.paired-ttest-table .app-table-header-sort-asc::after {
+  content: '\25bc';
+  position: absolute;
+  right: 10px;
+}
+
+.paired-ttest-table .app-table-header-sort-desc::after {
+  content: '\25b2';
+  position: absolute;
+  right: 10px;
+}
+
+.paired-ttest-table table {
+  margin-bottom: 0;
+}

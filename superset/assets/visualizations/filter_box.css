@@ -1,0 +1,93 @@
+.select2-highlighted > .filter_box {
+    background-color: transparent;
+    border: 1px superset black;
+}
+
+.dashboard .filter_box .slice_container > div:not(.alert) {
+    padding-top: 0;
+}
+
+.input-inline {
+    float: left;
+    display: inline-block;
+    padding-right: 3px;
+}
+
+ul.select2-results li.select2-highlighted div.filter_box{
+    color: black;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #666;
+}
+
+ul.select2-results div.filter_box{
+    color: black;
+    border-style: solid;
+    border-width: 1px;
+    border-color: transparent;
+}
+.filter_box.slice_container {
+    box-sizing: border-box;
+    padding: 10px;
+    overflow: hidden !important;
+}
+/* 必须低于 header.top 的 z-index: 100，否则页面上滚后 hover 该 slice
+   会盖住顶部固定菜单。同级 widget 的 z-index 为 auto，99 已足够。 */
+.filter_box:hover {
+    z-index: 99;
+}
+.m-b-5 {
+    margin-bottom: 5px;
+}
+
+.filter-box-layout {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.filter-box-layout.has-tree {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 不允许收缩：否则目录树展开后内容变高，负剩余空间会按比例压缩这一块。
+   max-height 已保证目录树至少能拿到一半高度。 */
+.filter-box-layout.has-tree .filter-box-controls {
+    flex: 0 0 auto;
+    max-height: 50%;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+/* Bootstrap 的 .row 带负外边距，会让内容比 filter-box-controls 宽出一圈 */
+.filter-box-controls > .row {
+    margin-right: 0;
+    margin-left: 0;
+}
+
+/* flex-basis 取 0，让目录树只占用剩余空间，其内容高度不参与主轴分配 */
+.filter-box-tree {
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.filter-box-tree-search {
+    flex: 0 0 auto;
+}
+
+.filter-box-tree-search input {
+    width: 100%;
+}
+
+.filter-box-tree-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding-top: 6px;
+    overflow-y: auto;
+}

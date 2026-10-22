@@ -1,0 +1,46 @@
+.tab-pane {
+    min-height: 400px;
+    background: white;
+    border: 1px solid #bbb;
+    border-top: 0px;
+}
+
+.label {
+    display: inline-block;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+.ppt-task-container {
+    padding: 10px;
+}
+
+.task-header {
+    margin-bottom: 5px;
+}
+
+.create-task-btn, .upload-template-btn {
+    margin-bottom: 5px;
+    border-radius: 10px !important;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+}
+
+.no-data {
+    text-align: center;
+    padding: 20px;
+    color: #999;
+}
+
+.ppt-task-container .btn-group .btn {
+    margin-right: 5px;
+    border-radius: 10px !important;
+}
+
+.ppt-task-container .table-ppttask > thead > tr > th,
+.ppt-task-container .table-ppttask > tbody > tr > td {
+    padding: 4px;
+}

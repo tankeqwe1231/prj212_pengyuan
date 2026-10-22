@@ -1,0 +1,247 @@
+/* 图表保存 / 图表收藏弹层 */
+.modal-dialog.save-chart-modal {
+  max-width: 560px;
+}
+
+.save-chart-modal .modal-content {
+  border: none;
+  border-radius: 10px;
+  /* Allow the select menu to extend beyond the modal without clipping options. */
+  overflow: visible;
+}
+
+.save-chart-modal .modal-header {
+  align-items: center;
+  border-bottom: 1px solid #e8eaf0;
+  padding: 16px 20px;
+}
+
+.save-chart-modal .modal-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2f3340;
+}
+
+.save-chart-modal__title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #e8ebf8;
+  color: #5b6bcf;
+  font-size: 14px;
+}
+
+.save-chart-modal__heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.save-chart-modal .modal-body {
+  padding: 20px 24px 8px;
+}
+
+.save-chart-modal .modal-footer {
+  border-top: 1px solid #e8eaf0;
+  padding: 14px 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.save-chart-section {
+  margin-bottom: 22px;
+}
+
+.save-chart-section__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4a4f5c;
+}
+
+.save-chart-section__title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #eceef3;
+  margin-left: 4px;
+}
+
+.save-chart-section__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #e8ebf8;
+  color: #5b6bcf;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.save-chart-section__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.save-chart-option-card {
+  border: 1px solid #e1e4ec;
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.save-chart-option-card:hover:not(.is-disabled) {
+  border-color: #c5cbe8;
+}
+
+.save-chart-option-card.is-selected {
+  border-color: #5b6bcf;
+  box-shadow: 0 0 0 1px rgba(91, 107, 207, 0.08);
+}
+
+.save-chart-option-card.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  background: #fafafb;
+}
+
+.save-chart-option-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.save-chart-option-card__label {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.4;
+}
+
+.save-chart-radio {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid #c0c4d0;
+  border-radius: 50%;
+  box-sizing: border-box;
+  position: relative;
+  background: #fff;
+}
+
+.save-chart-radio.is-checked {
+  border-color: #5b6bcf;
+}
+
+.save-chart-radio.is-checked::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #5b6bcf;
+  transform: translate(-50%, -50%);
+}
+
+.save-chart-input {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 1px solid #e1e4ec;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #333;
+  background: #fff;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.save-chart-input::placeholder {
+  color: #b0b5c3;
+}
+
+.save-chart-input:focus {
+  border-color: #5b6bcf;
+}
+
+.save-chart-select-wrap {
+  margin-top: 10px;
+}
+
+.save-chart-select-wrap .save-modal-selector {
+  margin: 0;
+}
+
+.save-chart-select-wrap .Select__control {
+  min-height: 38px;
+  border-color: #e1e4ec;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.save-chart-select-wrap .Select__control--is-focused {
+  border-color: #5b6bcf;
+  box-shadow: none;
+}
+
+.save-chart-select-wrap .Select__placeholder {
+  color: #b0b5c3;
+}
+
+.save-chart-copy-option {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #333;
+}
+
+.save-chart-btn {
+  min-width: 72px;
+  border: none;
+  border-radius: 6px;
+  background: #6b7ad8 !important;
+  color: #fff !important;
+  padding: 7px 16px;
+}
+
+.save-chart-btn:hover,
+.save-chart-btn:focus {
+  background: #5b6bcf !important;
+  color: #fff !important;
+}
+
+.save-chart-btn--primary {
+  background: #4f5fc4 !important;
+}
+
+.save-chart-btn--primary:hover,
+.save-chart-btn--primary:focus {
+  background: #4555b5 !important;
+}
+
+.save-chart-btn:disabled,
+.save-chart-btn--primary:disabled {
+  background: #c5cbe8 !important;
+  color: #fff !important;
+  opacity: 1;
+  cursor: not-allowed;
+}
