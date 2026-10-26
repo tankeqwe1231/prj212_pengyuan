@@ -63,14 +63,14 @@ function ChartBodyWithRef(props, ref) {
 
   useLayoutEffect(() => {
     if (previousEditModeRef.current !== editMode) {
-      if (editMode) {
-        $('.markup .editdiv').show();
-        $('.markup .showdiv').hide();
-      } else {
-        $('.markup .showdiv').show();
-        $('.markup .editdiv').hide();
-      }
-      previousEditModeRef.current = editMode;
+      // if (editMode) {
+      //   $('.markup .editdiv').show();
+      //   $('.markup .showdiv').hide();
+      // } else {
+      //   $('.markup .showdiv').show();
+      //   $('.markup .editdiv').hide();
+      // }
+      // previousEditModeRef.current = editMode;
     }
   }, [editMode]);
 

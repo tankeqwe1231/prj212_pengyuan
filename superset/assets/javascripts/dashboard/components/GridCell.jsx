@@ -4,6 +4,8 @@ import PropTypes from 'prop-types';
 
 import SliceHeader from './SliceHeader';
 import ChartContainer from '../../chart/ChartContainer';
+import TooltipWrapper from '../../components/TooltipWrapper';
+import { t } from '../../locales';
 import { areObjectsEqual } from '../../reduxUtils';
 import { isDashboardResizeSuppressed } from '../resizeUtils';
 
@@ -36,6 +38,7 @@ const propTypes = {
   clearFilter: PropTypes.func,
   removeFilter: PropTypes.func,
   editMode: PropTypes.bool,
+  sliceExplorePerm: PropTypes.bool,
   annotationQuery: PropTypes.object,
   can_exportCsv: PropTypes.bool,
   can_save_monitor: PropTypes.bool,
@@ -65,8 +68,13 @@ function GridCell(incomingProps) {
   Object.keys(GridCell.defaultProps || {}).forEach(key => {
     if (typeof props[key] === 'undefined') props[key] = GridCell.defaultProps[key];
   });
+  const currentFormData = props.formData || props.slice.formData;
+  const isDividedTitle = currentFormData.viz_type === 'markup' && currentFormData.is_divided_title === true;
+  const hideChartHeader = isDividedTitle ||
+    (currentFormData.viz_type === 'iframe' && Boolean(currentFormData.hide_chart_header));
   const propsRef = useRef(props);
   const cellRef = useRef(null);
+  const standaloneRef = useRef(new URLSearchParams(window.location.search).get('standalone_token'));
   const [widgetSize, setWidgetSize] = useState(() => ({
     height: props.widgetHeight || 400,
     width: props.widgetWidth || 400,
@@ -101,6 +109,7 @@ function GridCell(incomingProps) {
     return widgetSize.height - measuredHeaderHeight - descriptionHeight;
   }
   function headerHeight() {
+    if (hideChartHeader) return 0;
     return headerIdRef.current ? headerIdRef.current.offsetHeight : 30;
   }
   propsRef.current = props;
@@ -149,6 +158,7 @@ function GridCell(incomingProps) {
     isLoading,
     isCached,
     cachedDttm,
+    editMode,
     sliceExplorePerm,
     removeSlice,
     updateSliceName,
@@ -166,12 +176,17 @@ function GridCell(incomingProps) {
     html2Image,
     dashboardId
   } = propsRef.current;
-  return <div className={isLoading ? 'slice-cell-highlight' : 'slice-cell'} id={`cell-${slice.slice_id}`} ref={cellRef}>
-        <div ref={ref => {
+  const cellClassName = [
+    isLoading ? 'slice-cell-highlight' : 'slice-cell',
+    isDividedTitle && 'slice-cell--divided-title',
+    hideChartHeader && 'slice-cell--header-hidden',
+  ].filter(Boolean).join(' ');
+  return <div className={cellClassName} id={`cell-${slice.slice_id}`} ref={cellRef}>
+        {!hideChartHeader && <div ref={ref => {
       headerIdRef.current = ref;
     }}>
           <SliceHeader slice={slice} isExpanded={isExpanded} isCached={isCached} cachedDttm={cachedDttm} removeSlice={removeSlice} updateSliceName={updateSliceName} toggleExpandSlice={toggleExpandSlice} forceRefresh={forceRefresh} editMode={propsRef.current.editMode} annotationQuery={annotationQuery} exploreChart={exploreChart} exportCSV={exportCSV} html2Image={html2Image} can_exportCsv={propsRef.current.can_exportCsv} can_save_monitor={propsRef.current.can_save_monitor} show_top10_record={propsRef.current.show_top10_record} dashboardId={dashboardId} datasource={datasource} formData={formData} sliceExplorePerm={sliceExplorePerm} />
-        </div>
+        </div>}
         {
       /* This usage of dangerouslySetInnerHTML is safe since it is being used to render
          markdown that is sanitized with bleach. See:
@@ -186,6 +201,23 @@ function GridCell(incomingProps) {
       __html: slice.description_markeddown
     }} />
         <div className="row chart-container">
+          {hideChartHeader && (editMode || sliceExplorePerm) && !standaloneRef.current && <div className="chart-controls">
+            {editMode && <TooltipWrapper placement="top" label="move" tooltip={t('移动图表')}>
+              <button type="button" className="move-chart drag" aria-label={t('移动图表')}>
+                <i className="fa fa-arrows" aria-hidden="true" />
+              </button>
+            </TooltipWrapper>}
+            {sliceExplorePerm && <TooltipWrapper placement="top" label="exploreChart" tooltip={t('编辑图表')}>
+              <button type="button" className="exploreChart" aria-label={t('编辑图表')} onClick={() => exploreChart(slice)}>
+                <i className="fa fa-edit" aria-hidden="true" />
+              </button>
+            </TooltipWrapper>}
+            {editMode && <TooltipWrapper placement="top" label="close" tooltip={t('从页面中删除图表')}>
+              <button type="button" className="remove-chart" aria-label={t('从页面中删除图表')} onClick={() => removeSlice(slice)}>
+                <i className="fa fa-close" aria-hidden="true" />
+              </button>
+            </TooltipWrapper>}
+          </div>}
           <input type="hidden" value="false" />
           <ChartContainer containerId={`slice-container-${slice.slice_id}`} chartKey={chartKey} datasource={datasource} formData={formData} headerHeight={headerHeight()} height={height(slice)} width={width()} timeout={timeout} vizType={slice.formData.viz_type} addFilter={addFilter} getFilters={getFilters} clearFilter={clearFilter} removeFilter={removeFilter} editMode={propsRef.current.editMode} updateSliceFormData={updateSliceFormData} />
         </div>

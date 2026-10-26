@@ -46,14 +46,13 @@ function markupWidget(slice, payload) {
             id="ta_${slice.containerId}" 
             style="font-size: 17;width: 100%;overflow: auto;">
 ${payload.data.html}</textarea></div>`;
-    jqdiv.html(`<div class="showdiv">${payload.data.html}</div>${html}`);
-    $('#ta_' + slice.containerId).on('blur', function () {
-        // alert('222');
-        const sliceName = $('#' + fd.slice_id + '-cell .editable-title input').val();
-        // alert(sliceName);
-        fd.code = $('#ta_' + slice.containerId).val();
-        slice.props.actions.saveHtmlContent({ slice_id: fd.slice_id, form_data: fd }, sliceName);
-    });
+jqdiv.html(`<div class="showdiv">${payload.data.html}</div>`);
+    // jqdiv.html(`<div class="showdiv">${payload.data.html}</div>${html}`);
+    // $('#ta_' + slice.containerId).on('blur', function () {
+    //     const sliceName = $('#' + fd.slice_id + '-cell .editable-title input').val();
+    //     fd.code = $('#ta_' + slice.containerId).val();
+    //     slice.props.actions.saveHtmlContent({ slice_id: fd.slice_id, form_data: fd }, sliceName);
+    // });
   }
 }
 

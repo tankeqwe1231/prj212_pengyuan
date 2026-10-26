@@ -404,6 +404,11 @@
   color: #5b6fc0 !important;
 }
 
+#explore-container .control-panel-section .Select__menu {
+  /* Override react-select's generated styles so menus stay above Ace layers. */
+  z-index: 1000;
+}
+
 .control-panel-section .Select-multi-value-wrapper .Select-input > input {
   width: 100px;
 }

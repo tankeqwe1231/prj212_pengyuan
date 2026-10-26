@@ -40,7 +40,7 @@ def _get_aes_key(config):
     return key
 
 
-def aes_encrypt(plain_text, config):
+def aes_encrypt_gcm(plain_text, config):
     """使用随机 nonce 加密 UTF-8 字符串，并返回可放入 URL 的密文。"""
     key = _get_aes_key(config)
     if not isinstance(plain_text, str):
@@ -53,7 +53,7 @@ def aes_encrypt(plain_text, config):
     return _VERSION + '.' + encoded.rstrip('=')
 
 
-def aes_decrypt(cipher_text, config):
+def aes_decrypt_gcm(cipher_text, config):
     """校验 GCM 认证标签后返回明文；任何无效密文均拒绝。"""
     key = _get_aes_key(config)
     if not isinstance(cipher_text, str) or not cipher_text.startswith(_VERSION + '.'):

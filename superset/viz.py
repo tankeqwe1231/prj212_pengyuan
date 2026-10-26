@@ -37,7 +37,7 @@ from six import string_types, text_type
 from six.moves import cPickle as pkl, reduce
 
 from superset import app, cache, get_manifest_file, utils
-from superset.aes_utils import aes_encrypt
+from superset.aes_utils import aes_encrypt_gcm
 from superset.dataframe_export import dataframe_to_excel
 from superset.utils import DTTM_ALIAS, JS_MAX_INTEGER, merge_extra_filters, calculate_year_days, shift_dataframe
 from ast import literal_eval
@@ -4485,7 +4485,7 @@ class IFrameViz(BaseViz):
             },
             separators=(', ', ':'),
         )
-        return aes_encrypt(plain_text, config)
+        return aes_encrypt_gcm(plain_text, config)
 
     def get_data(self, df):
         fd = self.form_data

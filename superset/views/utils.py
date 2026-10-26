@@ -146,7 +146,7 @@ def create_ppt_with_images(user_name, standalone_token, task_info, web_port):
             screenshotter.driver.quit()
 
 
-def aes_decrypt(cipher_text):
+def aes_decrypt_cbc(cipher_text):
     aes_key = b"WQ7VcAQ8BHDzIUPo"
     aes_iv = b"WQ7VcAQ8BHDzIUPo"
     cipher = AES.new(aes_key, AES.MODE_CBC, aes_iv)

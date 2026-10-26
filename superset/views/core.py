@@ -67,7 +67,7 @@ from .base import (
     json_error_response, SliceClientListWidget, SupersetFilter,
     SupersetModelView, YamlExportMixin,
 )
-from .utils import (bootstrap_user_data, create_ppt_with_images, aes_decrypt, get_dify_chatflow_client_instance,
+from .utils import (bootstrap_user_data, create_ppt_with_images, get_dify_chatflow_client_instance,
 get_dify_workflow_client_instance, is_user_login)
 from flask_appbuilder.forms import QuerySelectField
 from superset.fab_bs5 import (

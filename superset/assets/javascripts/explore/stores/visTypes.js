@@ -1061,6 +1061,7 @@ export const visTypes = {
           ['markup_type'],
           ['code'],
           ['font_size', 'font_size_2'],
+          ['is_divided_title', null],
         ],
       },
     ],

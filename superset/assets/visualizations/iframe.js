@@ -32,7 +32,6 @@ function iframeWidget(slice, payload) {
   const iframe = slice.container.find('iframe');
   iframe.css('height', slice.height());
   iframe.attr('src', url);
-
 }
 
 module.exports = iframeWidget;

@@ -26,6 +26,52 @@ div.widget:hover .chart-controls {
   background-color: #fff;
   transition: opacity 0.5s ease-in-out;
 }
+
+.slice-cell--header-hidden > .chart-container {
+  position: relative;
+}
+
+div.widget .slice-cell--header-hidden > .chart-container > .chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  top: 4px;
+  right: 15px;
+  width: auto;
+  opacity: 0;
+  pointer-events: none;
+}
+
+div.widget .slice-cell--header-hidden > .chart-container:hover > .chart-controls,
+div.widget .slice-cell--header-hidden > .chart-container > .chart-controls:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+  background-color: #fff;
+}
+
+.slice-cell--header-hidden .chart-controls > button {
+  box-sizing: border-box;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  color: #ff9900;
+  cursor: pointer;
+}
+
+.slice-cell--header-hidden .chart-controls > button > .fa {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.slice-cell--header-hidden .chart-controls > .drag {
+  cursor: move;
+}
 div.widget .sliceDataFrom {
   position: absolute;
   right: 1px;
@@ -70,6 +116,13 @@ html.dashboard-page body.modal-open {
 
 .slice-grid .slice_container {
   background-color: #fff;
+}
+
+/* Clear only dashboard-owned backgrounds; preserve the user's markup styles. */
+.slice-grid div.widget:has(> .slice-cell--divided-title),
+.slice-grid .slice-cell--divided-title > .chart-container,
+.slice-grid .slice-cell--divided-title > .chart-container > .token > .slice_container {
+  background-color: transparent;
 }
 
 .dashboard .slice-grid .dragging,

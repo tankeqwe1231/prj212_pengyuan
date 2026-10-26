@@ -366,7 +366,7 @@ function Dashboard(incomingProps) {
       const waterMarkArr = propsRef.current.water_mark.split('|');
       for (const key in propsRef.current.slices) {
         const vizType = propsRef.current.slices[key].formData.viz_type;
-        if (vizType === 'iframe' || vizType === 'ckeditor_slice') {
+        if (vizType === 'markup' || vizType === 'iframe' || vizType === 'ckeditor_slice') {
           continue;
         }
         const parentNode = 'slice_' + key.split('_')[1];

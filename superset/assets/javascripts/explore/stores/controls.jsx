@@ -4016,6 +4016,14 @@ export const controls = {
     renderTrigger: true,
   },
 
+  is_divided_title: {
+    type: 'CheckboxControl',
+    label: t('不显示标题'),
+    default: false,
+    renderTrigger: false,
+    description: t('不显示标题'),
+  },
+
   iframe_by_token: {
     type: 'CheckboxControl',
     label: t('添加token参数'),
