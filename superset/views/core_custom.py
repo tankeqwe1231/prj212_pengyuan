@@ -40,20 +40,68 @@ import superset.models.core as models
 from .base import (BaseSupersetView,
                    json_error_response, SupersetModelView,
                    )
-from .utils import aes_decrypt, get_dify_workflow_client_instance, generate_oss_preview_url
+from .utils import aes_decrypt_cbc, get_dify_workflow_client_instance, generate_oss_preview_url
 from .utils_analyze import summarize_series
 from flask_appbuilder.forms import QuerySelectField
 from superset.fab_bs5 import BS5Select2Widget
 from wtforms.validators import DataRequired
 import uuid
 from bs4 import BeautifulSoup
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
+from decimal import Decimal
+from superset.connectors.connector_registry import ConnectorRegistry
 from .core import gen_top_category
+from .index_data_sources import (
+    QueryResultCache,
+    build_category_paths,
+    build_category_tree,
+    build_history_cache_key,
+    build_index_history_sql,
+    build_index_key,
+    build_index_metadata_sql,
+    build_index_source_registry,
+    build_source_registry_sql,
+    full_table_name,
+    get_source,
+    group_index_keys,
+    is_safe_select_sql,
+    load_latest_values_with_frequency,
+    normalize_index_records,
+    parse_index_key,
+    resolve_index_fields,
+)
+from .index_data_actions import (
+    add_calculated_index,
+    build_calculation_definition,
+    build_formula_recovery_result,
+    create_category,
+    delete_category,
+    delete_index,
+    move_category_node,
+    move_index_nodes,
+    read_stored_index_sql,
+    refresh_calculated_index_data,
+    rename_category,
+    update_category,
+    update_index_formula,
+)
+from .index_chart_params import (
+    apply_pivot_personalization,
+    apply_saved_chart_to_slice,
+    apply_series_options,
+    build_saved_chart_params,
+    order_pivot_indicator_names,
+    pick_primary_datasource,
+)
 from aliyunsdkcore.client import AcsClient
 from aliyunsdksts.request.v20150401.AssumeRoleRequest import AssumeRoleRequest
 
 config = app.config
 log_this = models.Log.log_this
+index_history_query_cache = QueryResultCache(
+    ttl_seconds=config.get('INDEX_HISTORY_CACHE_TTL_SECONDS', 120),
+    max_entries=config.get('INDEX_HISTORY_CACHE_MAX_ENTRIES', 32),
+)
 
 
 class TopCategory(SupersetModelView):
@@ -360,7 +408,7 @@ class IndexManage(BaseSupersetView):
                         values[7] = None
                     if not values[8]:
                         values[8] = None
-                    values[5] = aes_decrypt(values[5])
+                    values[5] = aes_decrypt_cbc(values[5])
                     placeholders = ','.join(['%s' for _ in columns])
                     sql = f"INSERT INTO {dbinfo['index_table_name']} ({','.join(columns)}) VALUES ({placeholders}) RETURNING table_id"
                     print(sql)
@@ -384,7 +432,7 @@ class IndexManage(BaseSupersetView):
                         values[7] = None
                     if not values[8]:
                         values[8] = None
-                    values[5] = aes_decrypt(values[5])
+                    values[5] = aes_decrypt_cbc(values[5])
                     set_clause = ','.join([f"{col}=%s" for col in columns])
                     sql = f"UPDATE {dbinfo['index_table_name']} SET {set_clause} WHERE table_id=%s"
                     # 添加table_id到参数列表
@@ -409,14 +457,14 @@ class IndexManage(BaseSupersetView):
                     columns = ['table_id', '指标分类', '指标id', '指标名称', '指标来源', '指标语句', '增加方式',
                                '更新时间', '刷新语句', 'wind指标项']
                     values = [rowData.get(col, '') for col in columns]
-                    values[5] = aes_decrypt(values[5])
+                    values[5] = aes_decrypt_cbc(values[5])
                     if shouldCalculate and len(values[5]) > 20 and len(values[6]):
                         update_order(db_engine, dbinfo['data_table_name'], values[5], values[3], values[1], values[6])
                     return json_success(json.dumps({'success': True}, ensure_ascii=False))
 
                 elif action == 'preview_data':
                     sql = json_data.get('sqlStatement')
-                    sql = aes_decrypt(sql)
+                    sql = aes_decrypt_cbc(sql)
                     database = db.session.query(models.Database).filter_by(database_name=dbinfo['db_name']).first()
                     df = database.get_df(sql, schema=None)
                     df = df.sort_values(by='日期', ascending=False)
@@ -449,209 +497,476 @@ appbuilder.add_view_no_menu(IndexManage)
 
 
 class IndexDataManage(BaseSupersetView):
-    """指标管理页面视图1"""
+    """指标数据管理页面：分类树、指标数据提取、计算指标与保存图表。"""
+
+    MAX_BATCH_INDEXES = 100
+
+    @staticmethod
+    def _index_manage():
+        return config.get('INDEX_MANAGE', {})
+
+    def _center_engine(self):
+        database = db.session.query(models.Database).filter_by(
+            database_name=self._index_manage().get('paramsDbName')).first()
+        if database is None:
+            raise ValueError('未找到指标中心库配置')
+        return database, database.get_sqla_engine()
+
+    @staticmethod
+    def _rows(result):
+        return [dict(row._mapping) for row in result.fetchall()]
+
+    def _load_registry(self, connection):
+        return build_index_source_registry(
+            self._rows(connection.execute(build_source_registry_sql())))
+
+    @staticmethod
+    def _json_number(value):
+        if isinstance(value, Decimal):
+            return float(value)
+        if isinstance(value, float) and value != value:
+            return None
+        return value
+
+    @staticmethod
+    def _format_date(value):
+        if isinstance(value, datetime):
+            if value.hour or value.minute or value.second:
+                return value.strftime('%Y-%m-%d %H:%M:%S')
+            return value.strftime('%Y-%m-%d')
+        if hasattr(value, 'isoformat'):
+            return value.isoformat()
+        return str(value)[:10] if value is not None else ''
+
+    @staticmethod
+    def _parse_formula_config(value):
+        if isinstance(value, dict):
+            return value
+        try:
+            return json.loads(value) if value else {}
+        except (TypeError, ValueError):
+            return {}
+
+    @staticmethod
+    def _decrypt_sql(value):
+        if not value:
+            raise ValueError('指标语句不能为空')
+        try:
+            return aes_decrypt_cbc(value)
+        except Exception:
+            raise ValueError('指标语句解密失败')
+
+    def _require_batch(self, items, label):
+        if not isinstance(items, list) or not items:
+            raise ValueError('{}不能为空'.format(label))
+        if len(items) > self.MAX_BATCH_INDEXES:
+            raise ValueError('单次最多处理{}个指标'.format(
+                self.MAX_BATCH_INDEXES))
+        return items
 
     @expose('/list/<varicode>', methods=['GET', 'POST'])
     @has_access
     def index(self, varicode=None):
-        INDEX_MANAGE = config.get('INDEX_MANAGE', {})
-        user_id = g.user.id
-        print('user_id:', user_id)
         if request.method == 'GET':
-            try:
-                database = db.session.query(models.Database).filter_by(
-                    database_name=INDEX_MANAGE['paramsDbName']).first()
-                sql = "SELECT param_name, index_table_name, data_table_name, db_name FROM index_params"
-                del_param_name = ['price_diff', 'jfjs', 'fof', 'jinlong', 'quant', 'mind']
-                df = database.get_df(sql, schema=None)
-                df = df[~df['param_name'].isin(del_param_name)]
-                db_dict = {row['param_name']: {
-                    'index_table_name': row['index_table_name'],
-                    'data_table_name': row['data_table_name'],
-                    'db_name': row['db_name']
-                } for row in df.to_dict('records')}
-                return self.render_template('superset/index_data_manage.html',
-                                            db_dict=json.dumps(db_dict),
-                                            index_manage=json.dumps(INDEX_MANAGE))
-            except Exception as e:
-                flash(f"IndexManage Get出错: {str(e)}", "danger")
-                return self.render_template('superset/index_data_manage.html')
-        else:
-            try:
-                def update_order(engineobj, data_table_name, sql, index_name, index_type, update_type):
-                    sql_final = ''
-                    sql = re.sub(r'select', f"select '{index_type}','{index_name}',", sql[:8],
-                                 flags=re.IGNORECASE) + sql[-len(sql) + 8:]
-                    print('指标语句:', sql)
-                    if update_type == '覆盖':
-                        sql_final = f"DELETE FROM {data_table_name} WHERE {INDEX_MANAGE['indexNameField']}='{index_name}'; "
+            return self.render_template(
+                'superset/index_data_manage.html',
+                index_manage=json.dumps(self._index_manage(), ensure_ascii=False),
+                user_id=g.user.id,
+            )
+        json_data = request.get_json(silent=True) or {}
+        action = json_data.get('action')
+        handler = self._ACTIONS.get(action)
+        if handler is None:
+            return json_error_response('未知操作', status=400)
+        try:
+            result = handler(self, json_data)
+            return json_success(json.dumps(
+                result, default=str, ensure_ascii=False))
+        except ValueError as ex:
+            db.session.rollback()
+            return json_error_response(str(ex), status=400)
+        except Exception:
+            db.session.rollback()
+            logging.exception('IndexDataManage action failed: %s', action)
+            return json_error_response('请求失败，请稍后重试')
 
-                    sql_final = sql_final + f" INSERT INTO {data_table_name} ({INDEX_MANAGE['indexTypeField']}," \
-                                            f"{INDEX_MANAGE['indexNameField']},{INDEX_MANAGE['dateField']},{INDEX_MANAGE['valueField']}) " + sql
-                    print('sql_final:', sql_final)
-                    engineobj.execute(sql_final)
+    def _get_index_list(self, json_data):
+        _, engine = self._center_engine()
+        with engine.connect() as connection:
+            registry = self._load_registry(connection)
+            records = normalize_index_records(
+                self._rows(connection.execute(build_index_metadata_sql())),
+                registry)
+            categories = self._rows(connection.execute(
+                'SELECT node_id,node_name,parent_id,node_order '
+                'FROM index_categorys WHERE node_status=1'))
+        for record in records:
+            record['计算配置'] = self._parse_formula_config(record['计算配置'])
+        return {
+            'indexDataList': records,
+            'treeNodeDict': build_category_tree(categories, records),
+            'categoryMap': build_category_paths(categories),
+            'sources': list(registry['sources'].values()),
+        }
 
-                json_data = request.get_json()
-                action = json_data.get('action')
-                dbinfo = json_data.get('dbinfo')
-                if action == 'get_index_list':
-                    # 所有库的指标列表union成视图表了，新增了 数据库、品种、指标列表、数据表、指标说明 5个字段
-                    database = db.session.query(models.Database).filter_by(database_name=INDEX_MANAGE['paramsDbName']).first()
-                    sql = "SELECT table_id,指标id,指标名称,指标来源,栏目类别,计算配置,数据库,品种,指标列表,数据表,指标说明 FROM 视图_全站指标管理"
-                    if 'localhost' and '192.168' in request.url:
-                        sql = "SELECT table_id,指标id,指标名称,指标来源,栏目类别,计算配置,数据库,品种,指标列表,数据表,指标说明 FROM 视图_全站指标管理 where 品种 in ('红枣','贵金属')"
-                    # 判断用户是否包含角色only_show_dashboards_test，该角色目前用于指定用户测试，core.py里也有判断
-                    if 'only_show_dashboards_test' in [x.name for x in g.user.roles]:
-                        sql = "SELECT table_id,指标id,指标名称,指标来源,栏目类别,计算配置,数据库,品种,指标列表,数据表,指标说明 FROM 视图_全站指标管理_测试"
-                    df_index = database.get_df(sql, schema=None)
-                    df_index['指标说明'] = df_index['指标说明'].fillna('')
-                    df_index = df_index[~df_index['指标说明'].str.contains('停')]
-                    df_index = df_index.dropna(subset=['指标名称'])
-                    df_index = df_index.drop_duplicates(subset=['数据库', '指标名称'])
-
-                    # 计算配置转换为字典,如果计算配置为空,则设置为空字典
-                    df_index['计算配置'] = df_index['计算配置'].apply(lambda x: json.loads(x) if x else {})
-                    df_index['栏目类别'] = df_index['栏目类别'].fillna('未分类')
-                    df_index['栏目类别'] = df_index['栏目类别'].replace('', '未分类')
-                    df_index['key'] = df_index['数据库'] + '|' + df_index['指标列表'] + '|' + df_index['数据表'] + '|' + \
-                                      df_index['table_id'].astype(str)
-                    df_index = df_index.fillna('')
-                    df_index = df_index.drop_duplicates(subset=['指标名称'])
-
-                    cols_dict = ['品种', '数据库', '指标列表', '数据表']
-                    db_map = {}
-                    for variety, group in df_index.groupby('品种'):
-                        row = group[cols_dict].iloc[0].to_dict()
-                        category_list = group['栏目类别'].dropna().unique().tolist()
-                        db_map[variety] = {
-                            **row,
-                            "栏目类别": category_list
+    def _get_latest_values(self, json_data):
+        requested = self._require_batch(json_data.get('indexes'), '指标')
+        fields = resolve_index_fields(self._index_manage())
+        _, engine = self._center_engine()
+        latest_values = {}
+        with engine.connect() as connection:
+            registry = self._load_registry(connection)
+            grouped = OrderedDict()
+            for item in requested:
+                parsed = parse_index_key((item or {}).get('key'), registry)
+                index_name = str(item.get('指标名称') or '').strip()
+                if not index_name:
+                    raise ValueError('指标名称不能为空')
+                source = parsed['source']
+                group = grouped.setdefault(
+                    (source['database'], source['data_table']),
+                    {'source': source, 'items': []})
+                group['items'].append((parsed['key'], index_name))
+                latest_values[parsed['key']] = {
+                    '频率': '未知', '最新值': '', '最新数据日期': ''}
+            for group in grouped.values():
+                names = list(dict.fromkeys(name for _, name in group['items']))
+                values = load_latest_values_with_frequency(
+                    connection, group['source'], names, fields)
+                for key, name in group['items']:
+                    if name in values:
+                        value = values[name]
+                        latest_values[key] = {
+                            '频率': value['频率'],
+                            '最新值': self._json_number(value['最新值']),
+                            '最新数据日期': self._format_date(
+                                value['最新数据日期']),
                         }
+        return {'latestValues': latest_values}
 
-                    index_data_list = df_index.to_dict('records') if not df_index.empty else []
-                    result_data = {'indexDataList': index_data_list, 'treeNodeDict': [], 'db_map': db_map}
-                    # 开始生成 ReactTreeVirtualized 数据
-                    node_map = {}
-                    node_list = []
-                    for _, row in df_index.iterrows():
-                        categories = row['栏目类别'].strip().split('|')
-                        path_parts = []
-                        current_children = node_list
-                        for cat in categories:
-                            cat = cat.strip()
-                            path_parts.append(cat)
-                            full_path = "|".join(path_parts)
-                            if full_path in node_map:
-                                node = node_map[full_path]
-                            else:
-                                node = {'name': cat, 'key': full_path, 'children': []}
-                                node_map[full_path] = node
-                                current_children.append(node)
-                            current_children = node['children']
-                        # 叶子节点
-                        current_children.append({'name': row['指标名称'], 'key': row['key']})
-                    if len(node_list):
-                        tree_node_dict = {"name": "目录", "key": "root", "children": node_list}
-                        result_data['treeNodeDict'] = tree_node_dict
-                    return json_success(json.dumps(result_data, default=str, ensure_ascii=False))
+    def _get_index_data(self, json_data):
+        requested = self._require_batch(json_data.get('indexlist'), '指标')
+        fields = resolve_index_fields(self._index_manage())
+        database, engine = self._center_engine()
+        with engine.connect() as connection:
+            registry = self._load_registry(connection)
+        groups = OrderedDict()
+        calculated = []
+        for item in requested:
+            item = item or {}
+            index_name = str(item.get('指标名称') or '').strip()
+            if not index_name:
+                raise ValueError('指标名称不能为空')
+            if item.get('is_calculate'):
+                sql = self._decrypt_sql(item.get('指标语句'))
+                if not is_safe_select_sql(sql):
+                    raise ValueError('计算指标“{}”的语句不是安全的只读查询'.format(
+                        index_name))
+                calculated.append((index_name, sql))
+                continue
+            source = parse_index_key(item.get('key'), registry)['source']
+            group = groups.setdefault(
+                (source['database'], source['data_table']), (source, []))
+            group[1].append(index_name)
 
-                elif action == 'add_index':
-                    indexinfo = json_data.get('indexinfo')
-                    shouldCalculate = indexinfo.get('isCalculate', False)
-                    database = db.session.query(models.Database).filter_by(database_name=indexinfo['数据库']).first()
-                    columns = ['指标分类', '指标id', '指标名称', '指标来源', '指标语句', '增加方式', '更新次序',
-                               '栏目类别', '计算配置']
-                    values = [indexinfo.get(col, '') for col in columns]
-                    values[0] = indexinfo['品种']
-                    values[5] = '覆盖'
-                    values[6] = 1
-                    values[4] = aes_decrypt(values[4])
-                    child_index = values[8].get("childIndex", {})
-                    # 调整child_index保留必要属性写入计算配置字段
-                    if child_index:
-                        for key, value in child_index.items():
-                            value = {'key': value.get('key', ''), '指标名称': value.get('指标名称', '')}
-                            child_index[key] = value
-                    values[8] = json.dumps(values[8], ensure_ascii=False)
-                    placeholders = ','.join(['%s' for _ in columns])
-                    sql = f"INSERT INTO {indexinfo['指标列表']} ({','.join(columns)}) VALUES ({placeholders}) RETURNING table_id"
-                    print(sql)
-                    db_engine = database.get_sqla_engine()
-                    result = db_engine.execute(sql, values)
-                    table_id = result.scalar()
-                    if shouldCalculate and len(values[4]) > 20:
-                        update_order(db_engine, indexinfo['数据表'], values[4], values[2], values[0], values[5])
-                    return json_success(json.dumps({'table_id': int(table_id)}, ensure_ascii=False))
+        rows_by_date = {}
+        columns = []
+        if groups:
+            group_list = list(groups.values())
 
-                elif action == 'delete_index':
-                    indexinfo = json_data.get('indexinfo')
-                    dbinfo_list = indexinfo['key'].split('|')
-                    database = db.session.query(models.Database).filter_by(database_name=dbinfo_list[0]).first()
-                    sql = f"DELETE FROM {dbinfo_list[2]} WHERE {INDEX_MANAGE['indexNameField']}=%s;"
-                    db_engine = database.get_sqla_engine()
-                    db_engine.execute(sql, [indexinfo['index_name']])
-                    sql = f"DELETE FROM {dbinfo_list[1]} WHERE table_id=%s"
-                    db_engine.execute(sql, [int(dbinfo_list[3])])
-                    return json_success(json.dumps({'success': True}, ensure_ascii=False))
+            def load_history():
+                sql, params, names = build_index_history_sql(group_list, fields)
+                with engine.connect() as connection:
+                    rows = connection.execute(sql, params).fetchall()
+                return names, [
+                    (self._format_date(row[0]),
+                     [self._json_number(value) for value in row[1:]])
+                    for row in rows
+                ]
 
-                elif action == 'edit_index':
-                    indexinfo = json_data.get('indexinfo')
-                    database = db.session.query(models.Database).filter_by(database_name=indexinfo['数据库']).first()
-                    columns = ['指标语句']
-                    values = [indexinfo.get(col, '') for col in columns]
-                    table_id = indexinfo.get('table_id')
-                    index_name = indexinfo.get('指标名称')
-                    index_type = indexinfo['品种']
-                    update_type = '覆盖'
-                    values[0] = aes_decrypt(values[0])
-                    values.append(table_id)
-                    set_clause = ','.join([f"{col}=%s" for col in columns])
-                    sql = f"UPDATE {indexinfo['指标列表']} SET {set_clause} WHERE table_id=%s"
-                    db_engine = database.get_sqla_engine()
-                    db_engine.execute(sql, values)
-                    if len(values[0]) > 20:
-                        update_order(db_engine, indexinfo['数据表'], values[0], index_name, index_type, update_type)
-                    return json_success(json.dumps({'success': True}, ensure_ascii=False))
+            (names, history), _ = index_history_query_cache.get_or_compute(
+                build_history_cache_key(group_list), load_history)
+            columns.extend(names)
+            for date_value, values in history:
+                rows_by_date.setdefault(date_value, {}).update(
+                    dict(zip(names, values)))
+        for index_name, sql in calculated:
+            if index_name in columns:
+                continue
+            df = database.get_df(sql, schema=None)
+            if df.empty:
+                columns.append(index_name)
+                continue
+            if '日期' not in df.columns or '价格' not in df.columns:
+                raise ValueError('计算指标“{}”需返回 日期 和 价格 两列'.format(
+                    index_name))
+            columns.append(index_name)
+            for date_value, value in zip(df['日期'], df['价格']):
+                rows_by_date.setdefault(
+                    self._format_date(date_value), {})[index_name] = (
+                        self._json_number(value))
+        if not rows_by_date:
+            return {'dataDict': {'index': [], 'columns': columns, 'data': []}}
+        dates = sorted(rows_by_date)
+        data = [
+            [
+                '' if rows_by_date[date_value].get(name) is None
+                else rows_by_date[date_value][name]
+                for name in columns
+            ]
+            for date_value in dates
+        ]
+        return {'dataDict': {'index': dates, 'columns': columns, 'data': data}}
 
-                elif action == 'get_index_data':
-                    # table_name = dbinfo['data_table_name']
-                    index_list = json_data.get('indexlist')
+    def _add_category(self, json_data):
+        _, engine = self._center_engine()
+        with engine.begin() as connection:
+            groups = None
+            if json_data.get('node_keys'):
+                groups = group_index_keys(
+                    json_data.get('node_keys'), self._load_registry(connection))
+            return create_category(
+                connection, json_data.get('node_name'),
+                json_data.get('parent_node_id'), groups)
 
-                    index_list_by_full_table_name = defaultdict(list)
-                    df_calculate_merge = pd.DataFrame()
-                    database = db.session.query(models.Database).filter_by(
-                        database_name=INDEX_MANAGE['paramsDbName']).first()
-                    for index in index_list:
-                        if index['is_calculate']:
-                            df_calculate = database.get_df(aes_decrypt(index['指标语句']), schema=None)
-                            df_calculate['indexname'] = index['index_name']
-                            df_calculate_merge = pd.concat([df_calculate_merge, df_calculate])
-                        else:
-                            index_list_by_full_table_name[index['数据表']].append(index['index_name'])
-                    if len(index_list_by_full_table_name.keys()):
-                        for full_table_name, index_name_list in index_list_by_full_table_name.items():
-                            index_values_normal = ",".join(
-                                ["'" + index_name.replace("'", "''") + "'" for index_name in index_name_list])
-                            sql = (
-                                f"SELECT {INDEX_MANAGE['dateField']} AS 日期,"
-                                f"{INDEX_MANAGE['indexNameField']} AS indexname,"
-                                f"{INDEX_MANAGE['valueField']} AS 价格 "
-                                f"FROM {full_table_name} "
-                                f"WHERE {INDEX_MANAGE['indexNameField']} IN ({index_values_normal})"
-                            )
-                            df = database.get_df(sql, schema=None)
-                            df_calculate_merge = pd.concat([df_calculate_merge, df])
-                    if not df_calculate_merge.empty:
-                        df_calculate_merge = df_calculate_merge.drop_duplicates(subset=['日期', 'indexname'])
-                        df_calculate_merge = df_calculate_merge.pivot(index='日期', columns='indexname', values='价格')
-                        df_calculate_merge = df_calculate_merge.fillna('')
-                        data_dict = df_calculate_merge.to_dict(orient='split') if not df_calculate_merge.empty else []
-                        return json_success(json.dumps({'dataDict': data_dict}, default=str, ensure_ascii=False))
-                    else:
-                        return json_success(json.dumps({'dataDict': []}, default=str, ensure_ascii=False))
-            except Exception as e:
-                print(e)
-                return json_error_response(f"请求失败: {str(e)}")
+    def _rename_category(self, json_data):
+        _, engine = self._center_engine()
+        with engine.begin() as connection:
+            return rename_category(
+                connection, json_data.get('node_id'),
+                json_data.get('node_name'))
+
+    def _update_category(self, json_data):
+        _, engine = self._center_engine()
+        with engine.begin() as connection:
+            return update_category(
+                connection, json_data.get('node_id'),
+                json_data.get('node_name'), json_data.get('parent_node_id'))
+
+    def _move_category(self, json_data):
+        _, engine = self._center_engine()
+        with engine.begin() as connection:
+            return move_category_node(
+                connection, json_data.get('node_id'),
+                json_data.get('new_parent_id'), json_data.get('new_order'))
+
+    def _move_indexes(self, json_data):
+        _, engine = self._center_engine()
+        with engine.begin() as connection:
+            groups = group_index_keys(
+                json_data.get('node_keys'), self._load_registry(connection))
+            return move_index_nodes(
+                connection, groups, json_data.get('new_parent_id'),
+                json_data.get('new_order'))
+
+    def _delete_node(self, json_data):
+        node_key = json_data.get('node_key')
+        if not isinstance(node_key, str) or node_key.startswith('virtual_'):
+            raise ValueError('该节点不能删除')
+        _, engine = self._center_engine()
+        with engine.begin() as connection:
+            registry = self._load_registry(connection)
+            if node_key.startswith('node_'):
+                try:
+                    node_id = int(node_key[len('node_'):])
+                except ValueError:
+                    raise ValueError('分类节点无效')
+                return delete_category(connection, node_id, registry)
+            parsed = parse_index_key(node_key, registry)
+            return delete_index(
+                connection, parsed['source'], parsed['table_id'])
+
+    def _add_index(self, json_data):
+        indexinfo = json_data.get('indexinfo') or {}
+        fields = resolve_index_fields(self._index_manage())
+        index_sql = self._decrypt_sql(indexinfo.get('指标语句'))
+        _, engine = self._center_engine()
+        with engine.begin() as connection:
+            source = get_source(
+                self._load_registry(connection), indexinfo.get('数据库'),
+                indexinfo.get('指标列表'))
+            result = add_calculated_index(
+                connection, source, indexinfo.get('指标名称'), index_sql,
+                indexinfo.get('计算配置'), indexinfo.get('node_id'))
+            refreshed = refresh_calculated_index_data(
+                connection, source, index_sql, result['指标名称'],
+                source['variety'], fields)
+        index_history_query_cache.clear()
+        result.update({
+            'key': build_index_key(
+                source['database'], source['list_table'],
+                source['data_table'], result['table_ID']),
+            '数据库': source['database'],
+            '指标列表': source['list_table'],
+            '数据表': source['data_table'],
+            '品种': source['variety'],
+            'datasource_id': source['datasource_id'],
+            '指标ID': '',
+            '指标说明': '',
+            'data_refreshed': refreshed,
+        })
+        return result
+
+    def _edit_index(self, json_data):
+        indexinfo = json_data.get('indexinfo') or {}
+        fields = resolve_index_fields(self._index_manage())
+        index_sql = self._decrypt_sql(indexinfo.get('指标语句'))
+        _, engine = self._center_engine()
+        with engine.begin() as connection:
+            parsed = parse_index_key(
+                indexinfo.get('key'), self._load_registry(connection))
+            source = parsed['source']
+            row = connection.execute(
+                'SELECT 指标名称 FROM {} WHERE table_ID=%s'.format(
+                    full_table_name(source['database'], source['list_table'])),
+                [parsed['table_id']],
+            ).fetchone()
+            if row is None:
+                raise ValueError('指标不存在或已删除')
+            result = update_index_formula(
+                connection, source, parsed['table_id'], index_sql,
+                indexinfo.get('计算配置'))
+            result['data_refreshed'] = refresh_calculated_index_data(
+                connection, source, index_sql, row[0], source['variety'],
+                fields)
+        index_history_query_cache.clear()
+        result['key'] = parsed['key']
+        return result
+
+    def _get_index_formula(self, json_data):
+        fields = resolve_index_fields(self._index_manage())
+        _, engine = self._center_engine()
+        with engine.connect() as connection:
+            registry = self._load_registry(connection)
+            parsed = parse_index_key(json_data.get('key'), registry)
+            source = parsed['source']
+            row = connection.execute(
+                'SELECT 指标名称,指标来源,指标语句,计算配置 FROM {} '
+                'WHERE table_ID=%s'.format(
+                    full_table_name(source['database'], source['list_table'])),
+                [parsed['table_id']],
+            ).fetchone()
+            if row is None:
+                raise ValueError('指标不存在或已删除')
+            row = dict(row._mapping)
+            index_sql = read_stored_index_sql(row.get('指标语句'), aes_decrypt_cbc)
+            if not index_sql:
+                raise ValueError('该指标没有计算语句')
+            stored_config = self._parse_formula_config(row.get('计算配置'))
+
+            def dependency_lookup(dep_source, metric_name):
+                return [item[0] for item in connection.execute(
+                    'SELECT table_ID FROM {} WHERE 指标名称=%s'.format(
+                        full_table_name(
+                            dep_source['database'], dep_source['list_table'])),
+                    [metric_name],
+                ).fetchall()]
+
+            result = build_formula_recovery_result(
+                row.get('指标来源'), stored_config, index_sql, registry,
+                dependency_lookup, fields)
+        result['calculation_definition'] = build_calculation_definition(
+            stored_config, index_sql, fields)
+        result['key'] = parsed['key']
+        return result
+
+    def _save_chart(self, json_data):
+        chart_name = str(json_data.get('chartName') or '').strip()
+        if not chart_name:
+            raise ValueError('图表名称不能为空')
+        chart_type = json_data.get('chartType') or 'line'
+        requested = self._require_batch(json_data.get('indexes'), '图表指标')
+        _, engine = self._center_engine()
+        with engine.connect() as connection:
+            registry = self._load_registry(connection)
+        chart_indexes = []
+        for item in requested:
+            item = item or {}
+            source = parse_index_key(item.get('key'), registry)['source']
+            name = str(item.get('指标名称') or '').strip()
+            if not name or name in dict(chart_indexes):
+                continue
+            chart_indexes.append((name, {
+                'datasource_id': source['datasource_id'],
+                'chartType': item.get('chartType'),
+                'stacked': bool(item.get('stacked')),
+                'yAxisIndex': 1 if item.get('yAxisIndex') == 1 else 0,
+                '品种': source['variety'],
+            }))
+        if chart_type == 'season':
+            chart_indexes = chart_indexes[:1]
+        datasource_id, chart_indexes = pick_primary_datasource(chart_indexes)
+        datasource = ConnectorRegistry.get_datasource(
+            'table', datasource_id, db.session)
+        if datasource is None:
+            raise ValueError('未找到图表数据源')
+
+        params = build_saved_chart_params(
+            chart_type, json_data.get('colorScheme'))
+        if chart_type == 'pivot':
+            order = order_pivot_indicator_names(
+                [name for name, _ in chart_indexes],
+                json_data.get('pivotIndicatorOrder'))
+            info_by_name = dict(chart_indexes)
+            chart_indexes = [(name, info_by_name[name]) for name in order]
+            apply_pivot_personalization(
+                params, json_data.get('pivotShowVarietyLabels'),
+                {name: info['品种'] for name, info in chart_indexes},
+                json_data.get('pivotVarietyColors'))
+        apply_series_options(params, chart_type, chart_indexes)
+
+        add_to_dash = json_data.get('addToDash')
+        dash = None
+        if add_to_dash == 'existing':
+            dash = db.session.query(models.Dashboard).filter_by(
+                id=int(json_data.get('dashboardId') or 0)).first()
+            if dash is None:
+                raise ValueError('仪表盘不存在')
+            if g.user.id not in [owner.id for owner in dash.owners or []]:
+                raise ValueError('只能添加到自己的仪表盘')
+        elif add_to_dash == 'new':
+            page_name = str(json_data.get('newPageName') or '').strip()
+            if not page_name:
+                raise ValueError('新页面名称不能为空')
+            dash = models.Dashboard(
+                dashboard_title=page_name, owners=[g.user])
+            db.session.add(dash)
+
+        slc = models.Slice(owners=[g.user])
+        apply_saved_chart_to_slice(slc, params, datasource, chart_name)
+        db.session.add(slc)
+        if dash is not None:
+            dash.slices.append(slc)
+        db.session.flush()
+        if add_to_dash == 'new':
+            db.session.add(models.FavStar(
+                user_id=g.user.id, obj_id=dash.id, class_name='Dashboard',
+                dttm=datetime.now()))
+        db.session.commit()
+        return {
+            'success': True,
+            'sliceId': slc.id,
+            'sliceUrl': slc.slice_url,
+            'savedIndexNames': [name for name, _ in chart_indexes],
+            'dashboard': dash.url if dash is not None else '',
+            'dashboard_name': dash.dashboard_title if dash is not None else '',
+        }
+
+    _ACTIONS = {
+        'get_index_list': _get_index_list,
+        'get_latest_values': _get_latest_values,
+        'get_index_data': _get_index_data,
+        'add_category': _add_category,
+        'rename_category': _rename_category,
+        'update_category': _update_category,
+        'move_category': _move_category,
+        'move_indexes': _move_indexes,
+        'delete_node': _delete_node,
+        'add_index': _add_index,
+        'edit_index': _edit_index,
+        'get_index_formula': _get_index_formula,
+        'save_chart': _save_chart,
+    }
 
 
 appbuilder.add_view_no_menu(IndexDataManage)

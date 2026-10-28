@@ -1,1555 +1,682 @@
-/* eslint no-unused-vars: 0 */
-import React, { useLayoutEffect, useRef, useState } from 'react';
-import echarts from 'echarts';
-import $ from 'jquery';
-import debounce from 'lodash.debounce';
+/* global notify */
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button } from 'react-bootstrap';
+import { LicenseManager } from 'ag-grid-enterprise';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-balham.css';
 import '../../../stylesheets/index_data_manage.css';
-import { AgGridReact } from 'ag-grid-react';
-import { AllEnterpriseModule, LicenseManager } from 'ag-grid-enterprise';
-import OnPasteSelect from '../../components/OnPasteSelect';
-import WindowedMenuList from '../../components/WindowedMenuList';
 import AlertsWrapper from '../../components/AlertsWrapper';
-import ReactTreeVirtualized from '../../modules/ReactTreeVirtualized';
-import { Button } from 'react-bootstrap';
 import { aesEncrypt } from '../../modules/utils';
 import { aggridlicense } from '../../../visualizations/constants';
+import { postAction } from '../api';
+import IndexTreePanel from './IndexTreePanel';
+import SelectedIndexGrid from './SelectedIndexGrid';
+import DataPanel from './DataPanel';
+import FormulaModal from '../modals/FormulaModal';
+import SaveChartModal from '../modals/SaveChartModal';
+import { CategoryNameModal, ConfirmModal } from '../modals/CategoryModals';
+import {
+  buildMoveRequest,
+  findNode,
+  getParentCategoryOptions,
+  isCategoryNode,
+  isRealCategory,
+  isRootCategory,
+} from '../utils/treeUtils';
+import {
+  FORMULA_LETTERS,
+  childIndexToDependencies,
+  dependenciesToChildIndex,
+  generateSqlFromFormula,
+} from '../utils/formulaUtils';
+import {
+  DEFAULT_COLOR_SCHEME,
+  buildVarietyColorMap,
+  getDefaultChartName,
+  getVisibleRows,
+  orderRows,
+  readStoredSize,
+  writeStoredSize,
+} from '../utils/chartUtils';
 
-// 设置ag-grid企业版许可证
 LicenseManager.setLicenseKey(aggridlicense);
-const AG_GRID_MODULES = [AllEnterpriseModule];
-const dbDictData = document.getElementById('main_contain').getAttribute('data-db_dict');
-const indexManageData = document.getElementById('main_contain').getAttribute('data-index_manage');
 
-function IndexDataManageMain(incomingProps) {
-  const props = {
-    ...incomingProps
-  };
-  Object.keys(IndexDataManageMain.defaultProps || {}).forEach(key => {
-    if (typeof props[key] === 'undefined') props[key] = IndexDataManageMain.defaultProps[key];
-  });
-  const propsRef = useRef(props);
-  const [state, setState] = useState(() => ({
-    // 树数据
-    treeData: {},
-    originalTreeData: {},
-    cursor: null,
-    // 搜索文本
-    searchText: '',
-    // 选中的指标信息数组
-    selectedIndexes: [],
-    // 当前选中的tab: 'data' or 'chart'
-    currentTab: 'data',
-    // 时序数据
-    timeSeriesData: null,
-    // 计算指标弹出层
-    showCalcModal: false,
-    calcFormData: {
-      newIndexName: '',
-      formula: ''
-    },
-    availableIndices: [],
-    // 提取数据按钮禁用状态
-    isExtractingData: false,
-    // 保存指标弹出层
-    showSaveModal: false,
-    currentSavingIndex: null,
-    selectedVariety: null,
-    selectedCategory: null,
-    isSavingIndex: false,
-    // 编辑指标弹出层
-    showEditModal: false,
-    editFormData: {
-      originalIndexName: '',
-      formula: '',
-      saveAsName: ''
-    },
-    editAvailableIndices: [],
-    currentEditingIndex: null,
-    // 删除确认弹出层
-    showDeleteConfirm: false,
-    deletingNode: null
-  }));
-  const stateRef = useRef(state);
-  stateRef.current = state;
-  const mountedRef = useRef(true);
-  const timersRef = useRef(new Set());
-  const updateState = (update, callback) => {
-    if (!mountedRef.current) return;
-    const previous = stateRef.current;
-    const partial = typeof update === 'function' ? update(previous, propsRef.current) : update;
-    if (partial == null) return;
-    const next = {
-      ...previous,
-      ...partial
+const MAX_BATCH = 100;
+const SELECTION_HEIGHT_KEY = 'indexDataManage.selectionPanelHeight';
+const SIDEBAR_WIDTH_KEY = 'indexDataManage.sidebarWidth';
+
+function readPageConfig() {
+  const container = document.getElementById('main_contain');
+  let indexManage = {};
+  try {
+    indexManage = JSON.parse(container.getAttribute('data-index_manage') || '{}');
+  } catch (e) {
+    indexManage = {};
+  }
+  return { indexManage, userId: container.getAttribute('data-user-id') || '' };
+}
+
+function notifyWarning(message) {
+  notify.show(message, { type: 'warning', time: 5000 });
+}
+
+function chunk(items, size) {
+  const result = [];
+  for (let i = 0; i < items.length; i += size) {
+    result.push(items.slice(i, i + size));
+  }
+  return result;
+}
+
+function useDragResize(storageKey, fallback, min, max, axis) {
+  const [size, setSize] = useState(() => readStoredSize(storageKey, fallback, min, max));
+  const sizeRef = useRef(size);
+  sizeRef.current = size;
+  const start = useCallback((event) => {
+    event.preventDefault();
+    const origin = axis === 'x' ? event.clientX : event.clientY;
+    const initial = sizeRef.current;
+    const handleMove = (moveEvent) => {
+      const delta = (axis === 'x' ? moveEvent.clientX : moveEvent.clientY) - origin;
+      setSize(Math.min(max, Math.max(min, initial + delta)));
     };
-    stateRef.current = next;
-    setState(next);
-    if (typeof callback === 'function') callback();
-  };
-  const scheduleTimeout = (callback, delay) => {
-    const timer = setTimeout(() => {
-      timersRef.current.delete(timer);
-      if (mountedRef.current) callback();
-    }, delay);
-    timersRef.current.add(timer);
-    return timer;
-  };
-  const lettersStringRef = useRef('abcdefghijklmno');
-  const indexDataListRef = useRef([]);
-  const checkedRowIndicesRef = useRef(new Set());
-  const rowSelectionRef = useRef({
-    mode: 'multiRow',
-    checkboxes: true,
-    headerCheckbox: true,
-    enableClickSelection: false
-  });
-  const selectionColumnDefRef = useRef({
-    width: 50,
-    minWidth: 50,
-    maxWidth: 50,
-    sortable: false,
-    resizable: true,
-    suppressSizeToFit: true
-  });
-  const defaultIndexListColDefRef = useRef({
-    sortable: false,
-    suppressHeaderMenuButton: true,
-    // 隐藏列右上角菜单
-    resizable: true,
-    cellStyle: {
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center'
-    }
-  });
-  const indexListColumnDefsRef = useRef([{
-    headerName: '指标名称',
-    field: '指标名称',
-    width: 300,
-    wrapText: true,
-    autoHeight: true,
-    cellStyle: {
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      lineHeight: '1.2',
-      whiteSpace: 'normal',
-      wordBreak: 'break-word'
-    }
-  }, {
-    headerName: '品种',
-    field: '品种',
-    width: 100
-  }, {
-    headerName: '指标来源',
-    field: '指标来源',
-    width: 100
-  }, {
-    headerName: '栏目类别',
-    field: '栏目类别',
-    width: 200
-  }, {
-    headerName: '操作',
-    field: 'action',
-    width: 80,
-    cellRenderer: renderActionButton,
-    resizable: false,
-    suppressSizeToFit: true,
-    cellStyle: {
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: '1px 2px'
-    }
-  }]);
-  const db_dictRef = useRef(dbDictData ? JSON.parse(dbDictData) : {});
-  const varicodeRef = useRef(location.href.split('/').pop());
-  const index_manageRef = useRef(indexManageData ? JSON.parse(indexManageData) : {});
-  const dbinfoRef = useRef(db_dictRef.current[varicodeRef.current]);
-  const typeListRef = useRef([]);
-  const db_mapRef = useRef({});
-  const throttledOnFilterMouseUpRef = useRef(debounce(onFilterMouseUp, 350));
-  const gridApiRef = useRef(undefined);
-  const dataGridApiRef = useRef(undefined);
-  const timeSeriesChartRef = useRef(undefined);
-  function onToggle(node, toggled) {
-    const {
-      cursor,
-      treeData
-    } = stateRef.current;
-    if (cursor) {
-      cursor.active = false;
-    }
-    node.active = true;
-    if (node.children) {
-      // 有子节点，展开/折叠
-      node.toggled = toggled;
-    } else {
-      // 没有子节点，触发点击事件
-      handleNodeClick(node);
-    }
-    updateState({
-      cursor: node,
-      treeData: Object.assign({}, treeData)
+    const handleUp = () => {
+      document.removeEventListener('mousemove', handleMove);
+      document.removeEventListener('mouseup', handleUp);
+      writeStoredSize(storageKey, sizeRef.current);
+    };
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleUp);
+  }, [storageKey, min, max, axis]);
+  const reset = useCallback(() => {
+    setSize(fallback);
+    writeStoredSize(storageKey, fallback);
+  }, [storageKey, fallback]);
+  return [size, start, reset];
+}
+
+export default function IndexDataManageMain() {
+  const pageConfig = useMemo(readPageConfig, []);
+  const [catalog, setCatalog] = useState({ indexes: {}, tree: null, categoryMap: [], sources: [] });
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [treeMoving, setTreeMoving] = useState(false);
+  const treeMovingRef = useRef(false);
+  const [treeSelectedKeys, setTreeSelectedKeys] = useState([]);
+  const [revealNodeKey, setRevealNodeKey] = useState(null);
+  const [selectedIndexes, setSelectedIndexes] = useState([]);
+  const [checkedKeys, setCheckedKeys] = useState([]);
+  const [latestValues, setLatestValues] = useState({});
+  const [timeSeriesData, setTimeSeriesData] = useState(null);
+  const [chartRows, setChartRows] = useState([]);
+  const [extracting, setExtracting] = useState(false);
+  const [modal, setModal] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [sidebarWidth, startSidebarResize, resetSidebarWidth] =
+    useDragResize(SIDEBAR_WIDTH_KEY, 300, 220, 640, 'x');
+  const [selectionHeight, startSelectionResize, resetSelectionHeight] =
+    useDragResize(SELECTION_HEIGHT_KEY, 210, 120, 520, 'y');
+  const catalogRef = useRef(catalog);
+  catalogRef.current = catalog;
+  const selectedRef = useRef(selectedIndexes);
+  selectedRef.current = selectedIndexes;
+
+  const loadCatalog = useCallback(() => {
+    setCatalogLoading(true);
+    return postAction('get_index_list')
+      .then((response) => {
+        const indexes = {};
+        (response.indexDataList || []).forEach((item) => {
+          indexes[item.key] = item;
+        });
+        setCatalog({
+          indexes,
+          tree: response.treeNodeDict || null,
+          categoryMap: response.categoryMap || [],
+          sources: response.sources || [],
+        });
+      })
+      .catch(error => notify.error(`获取指标列表失败: ${error.message}`))
+      .finally(() => setCatalogLoading(false));
+  }, []);
+
+  useEffect(() => {
+    loadCatalog();
+  }, [loadCatalog]);
+
+  const loadLatestValues = useCallback((rows) => {
+    const targets = rows.filter(row => !row.isCalculate);
+    chunk(targets, MAX_BATCH).forEach((batch) => {
+      postAction('get_latest_values', {
+        indexes: batch.map(row => ({ key: row.key, 指标名称: row.指标名称 })),
+      })
+        .then(response => setLatestValues(current => ({ ...current, ...(response.latestValues || {}) })))
+        .catch(error => notify.error(`获取最新值失败: ${error.message}`));
     });
-  }
-  function handleNodeClick(node) {
-    const {
-      selectedIndexes
-    } = stateRef.current;
-    const key = node.key;
-    const indexData = indexDataListRef.current.find(item => item.key === key);
-    if (!indexData) {
-      notify.error('未找到对应的指标数据');
+  }, []);
+
+  const addIndexes = useCallback((keys) => {
+    const existing = new Set(selectedRef.current.map(row => row.key));
+    const rows = keys
+      .filter(key => !existing.has(key) && catalogRef.current.indexes[key])
+      .map(key => catalogRef.current.indexes[key]);
+    if (!rows.length) {
+      notify.info(keys.length === 1 ? '该指标已添加' : '所选指标均已添加');
       return;
     }
+    setSelectedIndexes(current => current.concat(rows));
+    setCheckedKeys(current => current.concat(rows.map(row => row.key)));
+    loadLatestValues(rows);
+  }, [loadLatestValues]);
 
-    // 检查是否已经添加过
-    const exists = selectedIndexes.some(item => item.key === key);
-    if (exists) {
-      notify.error('该指标已添加');
+  const gridRows = useMemo(() => selectedIndexes.map(row => (
+    latestValues[row.key] ? { ...row, ...latestValues[row.key] } : row
+  )), [selectedIndexes, latestValues]);
+
+  // ---------- 树交互 ----------
+  function handleTreeClick(node, event) {
+    if (isCategoryNode(node)) return;
+    if (event && (event.ctrlKey || event.metaKey)) {
+      setTreeSelectedKeys(current => (current.indexOf(node.key) === -1
+        ? current.concat(node.key)
+        : current.filter(key => key !== node.key)));
       return;
     }
+    setTreeSelectedKeys([node.key]);
+  }
 
-    // 添加到选中数组
-    const newSelectedIndexes = [...selectedIndexes, indexData];
-    updateState({
-      selectedIndexes: newSelectedIndexes
-    }, () => {
-      // 在状态更新后恢复选中状态
-      scheduleTimeout(() => {
-        restoreSelection();
-      }, 50);
+  function getTargetLeafKeys(node) {
+    return treeSelectedKeys.indexOf(node.key) !== -1 ? treeSelectedKeys : [node.key];
+  }
+
+  function runTreeMutation(request, successMessage, revealKey, onSuccess) {
+    setSaving(true);
+    const { action, ...payload } = request;
+    return postAction(action, payload)
+      .then(() => {
+        setModal(null);
+        if (onSuccess) onSuccess();
+        if (successMessage) notify.success(successMessage);
+        if (revealKey) setRevealNodeKey(revealKey);
+        return loadCatalog();
+      })
+      .catch(error => notify.error(error.message))
+      .finally(() => setSaving(false));
+  }
+
+  function handleNodeDrop(dragNode, target, position) {
+    if (treeMovingRef.current) return;
+    const request = buildMoveRequest(catalogRef.current.tree, dragNode, target, position);
+    if (!request) return;
+    // 同步阻止重复提交，直到移动请求和目录刷新都结束后才恢复交互。
+    treeMovingRef.current = true;
+    setTreeMoving(true);
+    runTreeMutation(request, null, dragNode.key).finally(() => {
+      treeMovingRef.current = false;
+      setTreeMoving(false);
     });
   }
-  function onFilterMouseUp(e) {
-    const filterInput = document.getElementById('tree_search_input').value.trim();
-    updateState({
-      searchText: filterInput
-    });
-  }
-  function handleDeleteRow(key) {
-    const {
-      selectedIndexes
-    } = stateRef.current;
-    const newSelectedIndexes = selectedIndexes.filter(item => item.key !== key);
-    checkedRowIndicesRef.current.delete(key);
-    updateState({
-      selectedIndexes: newSelectedIndexes
-    }, () => {
-      scheduleTimeout(() => {
-        restoreSelection();
-      }, 50);
-    });
-  }
+
   function getContextMenuItems(node) {
-    // 只有叶子节点（没有 children 或 children 为空）才显示删除菜单
-    if (node.children && node.children.length > 0) {
-      return [];
+    if (isCategoryNode(node)) {
+      if (!isRealCategory(node)) return [];
+      const items = [{
+        label: '添加子节点',
+        icon: 'fa fa-plus',
+        onClick: () => setModal({ type: 'addCategory', parent: node }),
+      }];
+      if (!isRootCategory(node)) {
+        items.push({ label: '修改节点', icon: 'fa fa-edit', onClick: () => setModal({ type: 'editCategory', node }) });
+        const original = findNode(catalogRef.current.tree, node.key);
+        if (original && original.node.children.length === 0) {
+          items.push(
+            { divider: true },
+            { label: '删除节点', icon: 'fa fa-trash-o', onClick: () => setModal({ type: 'deleteNode', node }) },
+          );
+        }
+      }
+      return items;
     }
-    return [{
-      label: '删除',
-      icon: 'fa fa-trash',
-      onClick: () => openDeleteConfirm(node)
+    const keys = getTargetLeafKeys(node);
+    const located = findNode(catalogRef.current.tree, node.key);
+    const parent = located && located.parent;
+    const items = [{
+      label: keys.length > 1 ? `添加 ${keys.length} 个指标到操作列表` : '添加到操作列表',
+      icon: 'fa fa-plus-square-o',
+      onClick: () => addIndexes(keys),
     }];
-  }
-  function openDeleteConfirm(node) {
-    updateState({
-      showDeleteConfirm: true,
-      deletingNode: node
-    });
-  }
-  function closeDeleteConfirm() {
-    updateState({
-      showDeleteConfirm: false,
-      deletingNode: null
-    });
-  }
-  function confirmDelete() {
-    const {
-      deletingNode
-    } = stateRef.current;
-    if (deletingNode) {
-      handleDeleteIndexFromTree(deletingNode);
+    if (parent && isRealCategory(parent)) {
+      items.push({
+        label: keys.length > 1 ? `为 ${keys.length} 个指标新建节点` : '新建节点并移入',
+        icon: 'fa fa-folder-open-o',
+        onClick: () => setModal({ type: 'groupCategory', parent, keys }),
+      });
     }
-    closeDeleteConfirm();
+    items.push(
+      { divider: true },
+      { label: '删除指标', icon: 'fa fa-trash-o', onClick: () => setModal({ type: 'deleteNode', node }) },
+    );
+    return items;
   }
-  function handleDeleteIndexFromTree(node) {
-    const nodeKey = node.key;
-    if (!nodeKey) {
-      notify.error('节点信息不完整');
-      return;
-    }
-    const indexCurrent = indexDataListRef.current.find(item => item.key === nodeKey);
-    $.ajax({
-      url: '',
-      type: 'POST',
-      dataType: 'json',
-      contentType: 'application/json',
-      data: JSON.stringify({
-        action: 'delete_index',
-        indexinfo: {
-          key: nodeKey,
-          index_name: indexCurrent['指标名称']
-        }
-      }),
-      success: response => {
-        if (response.error) {
-          notify.error(`删除失败: ${response.error}`);
-          return;
-        }
 
-        // 从树中移除节点
-        const {
-          originalTreeData,
-          selectedIndexes
-        } = stateRef.current;
-        const removeNodeFromTree = treeNode => {
-          if (!treeNode.children) {
-            return treeNode;
-          }
-          const newChildren = treeNode.children.filter(child => child.key !== nodeKey).map(child => removeNodeFromTree(child));
-          return {
-            ...treeNode,
-            children: newChildren
-          };
-        };
-        const newTreeData = removeNodeFromTree(originalTreeData);
+  // ---------- 操作列表 ----------
+  function getCheckedRows() {
+    const checked = new Set(checkedKeys);
+    return selectedIndexes.filter(row => checked.has(row.key));
+  }
 
-        // 从 indexDataList 中移除
-        indexDataListRef.current = indexDataListRef.current.filter(item => item.key !== nodeKey);
+  function handleRemoveRow(key) {
+    setSelectedIndexes(current => current.filter(row => row.key !== key));
+    setCheckedKeys(current => current.filter(item => item !== key));
+  }
 
-        // 从 selectedIndexes 中移除（如果存在）
-        const newSelectedIndexes = selectedIndexes.filter(item => item.key !== nodeKey);
-        checkedRowIndicesRef.current.delete(nodeKey);
-        updateState({
-          originalTreeData: newTreeData,
-          treeData: newTreeData,
-          selectedIndexes: newSelectedIndexes
-        }, () => {
-          scheduleTimeout(() => {
-            restoreSelection();
-            notify.success('删除成功');
-          }, 50);
-        });
-      },
-      error: (xhr, status, error) => {
-        notify.error(`删除请求失败: ${error}`);
-      }
+  function handleReorder(orderedKeys) {
+    setSelectedIndexes((current) => {
+      const byKey = {};
+      current.forEach((row) => {
+        byKey[row.key] = row;
+      });
+      return orderedKeys.map(key => byKey[key]).filter(Boolean);
     });
   }
-  function handleExtractData() {
-    if (!gridApiRef.current) {
-      notify.error('表格未初始化');
-      return;
-    }
-    const selectedRows = gridApiRef.current.getSelectedRows();
-    if (selectedRows.length === 0) {
-      notify.error('请至少选择一个指标');
-      return;
-    }
-    updateState({
-      isExtractingData: true
-    });
-    const indexList = selectedRows.map(row => ({
-      index_name: row.指标名称,
-      is_calculate: row.isCalculate || false,
-      指标语句: row.指标语句,
-      数据表: `${row.数据库}.dbo.${row.数据表}`
-    }));
-    $.ajax({
-      url: '',
-      type: 'POST',
-      dataType: 'json',
-      contentType: 'application/json',
-      data: JSON.stringify({
-        action: 'get_index_data',
-        dbinfo: dbinfoRef.current,
-        indexlist: indexList.map(item => ({
-          ...item,
-          指标语句: item.指标语句 ? aesEncrypt(item.指标语句) : ''
-        }))
-      }),
-      success: response => {
-        updateState({
-          isExtractingData: false
-        });
-        if (response.error) {
-          notify.error(`提取数据失败: ${response.error}`);
-          return;
-        }
-        const data = response.dataDict;
-        if (data.length === 0) {
-          notify.error('暂无数据');
-          return;
-        }
-        updateState({
-          timeSeriesData: data,
-          currentTab: 'data'
-        }, () => {
-          // 如果在图形tab，需要绘制图表
-          if (stateRef.current.currentTab === 'chart') {
-            renderChart();
-          } else {
-            renderDataTab();
-          }
-        });
-      },
-      error: (xhr, status, error) => {
-        updateState({
-          isExtractingData: false
-        });
-        notify.error(`请求失败: ${error}`);
-      }
-    });
+
+  function handleClearRows() {
+    setSelectedIndexes([]);
+    setCheckedKeys([]);
   }
-  function handleEditFormula() {
-    if (!gridApiRef.current) {
-      notify.error('表格未初始化');
-      return;
-    }
-    const selectedRows = gridApiRef.current.getSelectedRows();
-    if (selectedRows.length === 0) {
+
+  function handleExtract() {
+    const rows = getCheckedRows();
+    if (!rows.length) {
       notify.error('请至少勾选一个指标');
       return;
     }
-    const isCalculate = selectedRows.some(row => row.isCalculate);
-    if (isCalculate) {
-      notify.error('不能依赖计算指标，请先将计算指标保存为普通指标', {
-        time: 3000
-      });
+    if (rows.length > MAX_BATCH) {
+      notify.error(`单次最多提取${MAX_BATCH}个指标`);
       return;
     }
-
-    // 生成可用指标列表（最多15个，a-o）
-    const letters = lettersStringRef.current.split('');
-    const availableIndices = selectedRows.slice(0, 15).map((row, index) => ({
-      letter: letters[index],
-      name: row.指标名称,
-      data: row
-    }));
-    updateState({
-      showCalcModal: true,
-      availableIndices,
-      calcFormData: {
-        newIndexName: '',
-        formula: ''
-      }
-    });
-  }
-  function onSelectionGridReady(params) {
-    gridApiRef.current = params.api;
-    params.api.sizeColumnsToFit();
-  }
-  function restoreSelection() {
-    if (!gridApiRef.current) {
-      return;
-    }
-    // 遍历所有行，根据保存的索引恢复选中状态
-    gridApiRef.current.forEachNode(node => {
-      if (checkedRowIndicesRef.current.has(node.data.key)) {
-        node.setSelected(true);
-      }
-    });
-  }
-  function onSelectionChanged() {
-    if (!gridApiRef.current) {
-      return;
-    }
-    // 更新保存的选中行索引
-    const selectedRows = gridApiRef.current.getSelectedRows();
-    checkedRowIndicesRef.current.clear();
-    selectedRows.forEach(row => {
-      checkedRowIndicesRef.current.add(row.key);
-    });
-  }
-  function onDataGridReady(params) {
-    dataGridApiRef.current = params.api;
-    params.api.sizeColumnsToFit();
-  }
-  function switchTab(tab) {
-    updateState({
-      currentTab: tab
-    }, () => {
-      if (tab === 'chart' && stateRef.current.timeSeriesData) {
-        // 延迟绘制图表，确保DOM已渲染
-        scheduleTimeout(() => {
-          renderChart();
-        }, 100);
-      }
-    });
-  }
-  function handleCalcInputChange(field, value) {
-    const {
-      calcFormData
-    } = stateRef.current;
-    updateState({
-      calcFormData: Object.assign({}, calcFormData, {
-        [field]: value
+    setExtracting(true);
+    postAction('get_index_data', {
+      indexlist: rows.map(row => ({
+        key: row.key,
+        指标名称: row.指标名称,
+        is_calculate: Boolean(row.isCalculate),
+        指标语句: row.isCalculate ? aesEncrypt(row.指标语句) : undefined,
+      })),
+    })
+      .then((response) => {
+        const data = response.dataDict || {};
+        if (!data.index || !data.index.length) {
+          notify.info('所选指标暂无数据');
+        }
+        setTimeSeriesData(data);
+        setChartRows(rows);
       })
-    });
+      .catch(error => notify.error(`提取数据失败: ${error.message}`))
+      .finally(() => setExtracting(false));
   }
-  function handleCalcCancel() {
-    updateState({
-      showCalcModal: false,
-      calcFormData: {
-        newIndexName: '',
-        formula: ''
+
+  // ---------- 计算公式 ----------
+  function handleNewFormula() {
+    const rows = getCheckedRows().filter(row => !row.isCalculate);
+    if (!rows.length) {
+      notify.error('请先勾选参与计算的普通指标');
+      return;
+    }
+    if (rows.length > FORMULA_LETTERS.length) {
+      notify.error(`最多选择 ${FORMULA_LETTERS.length} 个指标参与计算`);
+      return;
+    }
+    setModal({
+      type: 'formula',
+      mode: 'create',
+      initial: {
+        dependencies: rows.map((row, i) => ({ letter: FORMULA_LETTERS[i], key: row.key, 指标名称: row.指标名称 })),
       },
-      availableIndices: []
     });
   }
-  function handleCalcConfirm() {
-    const {
-      calcFormData,
-      availableIndices,
-      selectedIndexes
-    } = stateRef.current;
-    const {
-      newIndexName,
-      formula
-    } = calcFormData;
-    if (!newIndexName || !newIndexName.trim()) {
-      notify.error('请输入新指标名称');
-      return;
-    }
-    if (!formula || !formula.trim()) {
-      notify.error('请输入计算公式');
-      return;
-    }
 
-    // 清除空格，替换中文括号
-    const cleanFormula = formula.replace(/\s/g, '').replace(/（/g, '(').replace(/）/g, ')');
-
-    // 提取公式中使用的字母
-    const usedLetters = cleanFormula.match(/[a-o]/g) || [];
-    const uniqueLetters = [...new Set(usedLetters)];
-
-    // 验证：计算公式中的字母必须在可用字母列表中
-    const availableLetters = availableIndices.map(item => item.letter);
-    const invalidLetters = uniqueLetters.filter(letter => !availableLetters.includes(letter));
-    if (invalidLetters.length > 0) {
-      notify.error(`公式中包含无效的字母: ${invalidLetters.join(', ')}`);
-      return;
-    }
-    if (uniqueLetters.length === 0) {
-      notify.error('公式中至少需要包含一个指标字母（a-o）');
-      return;
-    }
-
-    // 构建 childIndex
-    const childIndex = {};
-    uniqueLetters.forEach(letter => {
-      const indexItem = availableIndices.find(item => item.letter === letter);
-      if (indexItem) {
-        childIndex[letter] = indexItem.data;
-      }
-    });
-    const sql = generateSqlFromFormula(cleanFormula, childIndex, uniqueLetters);
-    const uuid = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    // 创建新指标对象
-    const newIndex = {
-      table_id: `calc_${uuid}`,
-      key: `calc_${uuid}`,
-      指标id: newIndexName.trim(),
-      指标名称: newIndexName.trim(),
-      指标来源: '计算指标',
-      栏目类别: '',
-      数据库: '',
-      品种: '',
-      指标列表: '',
-      数据表: '',
-      isCalculate: true,
-      计算配置: {
-        formula: cleanFormula,
-        childIndex
-      },
-      指标语句: sql
-    };
-
-    // 添加到 selectedIndexes
-    const newSelectedIndexes = [...selectedIndexes, newIndex];
-    checkedRowIndicesRef.current.add(newIndex.key);
-    updateState({
-      selectedIndexes: newSelectedIndexes,
-      showCalcModal: false,
-      calcFormData: {
-        newIndexName: '',
-        formula: ''
-      },
-      availableIndices: []
-    }, () => {
-      scheduleTimeout(() => {
-        restoreSelection();
-        notify.success('计算指标添加成功');
-      }, 50);
-    });
-  }
-  function generateSqlFromFormula(formula, childIndex, usedLetters) {
-    const {
-      dateField,
-      indexNameField,
-      valueField
-    } = index_manageRef.current;
-    // const dbName = this.dbinfo.db_name;
-    // const tableName = this.dbinfo.data_table_name;
-
-    // 第一个字母
-    const firstLetter = usedLetters[0];
-    const firstChildIndex = childIndex[firstLetter];
-    const firstChildIndexKeyList = firstChildIndex.key.split('|');
-    let valueExpression = formula;
-    usedLetters.forEach(letter => {
-      const regex = new RegExp(letter, 'g');
-      valueExpression = valueExpression.replace(regex, `${letter}.${valueField}`);
-    });
-
-    // 构建 FROM 子句
-    const fromClause = `${firstChildIndexKeyList[0]}.dbo.${firstChildIndexKeyList[2]} as ${firstLetter}`;
-
-    // 构建 JOIN 子句
-    const joinClauses = [];
-    for (let i = 1; i < usedLetters.length; i++) {
-      const letter = usedLetters[i];
-      const childIndexKeyList = childIndex[letter].key.split('|');
-      joinClauses.push(`join ${childIndexKeyList[0]}.dbo.${childIndexKeyList[2]} as ${letter} on ${firstLetter}.${dateField}=${letter}.${dateField}`);
-    }
-
-    // 构建 WHERE 子句
-    const whereClauses = usedLetters.map(letter => {
-      const indexName = childIndex[letter].指标名称;
-      // 转义单引号
-      const escapedName = indexName.replace(/'/g, "''");
-      return `${letter}.${indexNameField}='${escapedName}'`;
-    });
-
-    // 完整 SQL
-    const sql = `SELECT ${firstLetter}.${dateField} as 日期, ${valueExpression} as 价格 FROM ${fromClause} ${joinClauses.join(' ')} WHERE ${whereClauses.join(' and ')}`;
-    return sql;
-  }
-  function handleSaveIndex(indexData) {
-    updateState({
-      showSaveModal: true,
-      currentSavingIndex: indexData,
-      selectedVariety: null,
-      selectedCategory: null
-    });
-  }
-  function handleSaveCancel() {
-    updateState({
-      showSaveModal: false,
-      currentSavingIndex: null,
-      selectedVariety: null,
-      selectedCategory: null
-    });
-  }
-  function handleSaveConfirm() {
-    const {
-      currentSavingIndex,
-      selectedVariety,
-      selectedCategory,
-      selectedIndexes
-    } = stateRef.current;
-    if (!selectedVariety) {
-      notify.error('请选择品种');
-      return;
-    }
-    if (!selectedCategory) {
-      notify.error('请选择栏目类别');
-      return;
-    }
-    const varietyData = db_mapRef.current[selectedVariety];
-    const updatedIndex = Object.assign({}, currentSavingIndex, {
-      品种: selectedVariety,
-      数据库: varietyData['数据库'],
-      指标列表: varietyData['指标列表'],
-      数据表: varietyData['数据表'],
-      栏目类别: selectedCategory
-    });
-
-    // 禁用按钮
-    updateState({
-      isSavingIndex: true
-    });
-    $.ajax({
-      url: '',
-      type: 'POST',
-      dataType: 'json',
-      contentType: 'application/json',
-      data: JSON.stringify({
-        action: 'add_index',
-        dbinfo: dbinfoRef.current,
-        indexinfo: {
-          ...updatedIndex,
-          '指标语句': aesEncrypt(updatedIndex.指标语句)
-        }
-      }),
-      success: response => {
-        // 恢复按钮状态
-        updateState({
-          isSavingIndex: false
-        });
-        if (response.error) {
-          notify.error(`保存失败: ${response.error}`);
-          return;
-        }
-        const newTableId = response.table_id;
-        const newKey = `${varietyData['数据库']}|${varietyData['指标列表']}|${varietyData['数据表']}|${newTableId}`;
-        const oldKey = currentSavingIndex.key;
-        const afterUpdateIndex = Object.assign({}, updatedIndex, {
-          key: newKey,
-          table_id: newTableId,
-          isCalculate: false
-        });
-
-        // 更新selectedIndexes中的对应指标
-        const newSelectedIndexes = selectedIndexes.map(index => {
-          if (index.key === oldKey) {
-            return Object.assign({}, index, afterUpdateIndex);
-          }
-          return index;
-        });
-
-        // 更新checkedRowIndices
-        if (checkedRowIndicesRef.current.has(oldKey)) {
-          checkedRowIndicesRef.current.delete(oldKey);
-          checkedRowIndicesRef.current.add(newKey);
-        }
-
-        // 将指标插入到树中
-        insertIndexToTree(afterUpdateIndex.指标名称, newKey, selectedCategory);
-        // 更新indexDataList
-        indexDataListRef.current.push(afterUpdateIndex);
-        updateState({
-          selectedIndexes: newSelectedIndexes,
-          showSaveModal: false,
-          currentSavingIndex: null,
-          selectedVariety: null,
-          selectedCategory: null
-        }, () => {
-          // 恢复选中状态
-          scheduleTimeout(() => {
-            restoreSelection();
-            notify.success('保存成功');
-          }, 50);
-        });
-      },
-      error: (xhr, status, error) => {
-        // 恢复按钮状态
-        updateState({
-          isSavingIndex: false
-        });
-        notify.error(`请求失败: ${error}`);
-      }
-    });
-  }
-  function insertIndexToTree(indexName, tableId, category) {
-    const {
-      originalTreeData
-    } = stateRef.current;
-    const categories = category.split('|');
-
-    // 结构共享：只拷贝从根到目标节点路径上的节点，其他分支保持原引用
-    const treeRoot = {
-      ...originalTreeData
-    };
-    let currentNode = treeRoot;
-    for (let i = 0; i < categories.length; i++) {
-      const categoryName = categories[i];
-      const childIndex = currentNode.children.findIndex(node => node.name === categoryName);
-      // 浅拷贝 children 数组和目标子节点
-      currentNode.children = [...currentNode.children];
-      currentNode.children[childIndex] = {
-        ...currentNode.children[childIndex]
-      };
-      currentNode = currentNode.children[childIndex];
-    }
-
-    // 浅拷贝最后一级的 children 数组，然后添加新节点
-    currentNode.children = [...(currentNode.children || []), {
-      name: indexName,
-      key: tableId
-    }];
-    updateState({
-      originalTreeData: treeRoot,
-      treeData: treeRoot
-    });
-  }
-  function handleEditIndex(indexData) {
-    const {
-      计算配置
-    } = indexData;
-    const {
-      childIndex,
-      formula
-    } = 计算配置;
-
-    // 构建可用指标列表
-    const editAvailableIndices = Object.keys(childIndex).map((letter, index) => ({
-      letter,
-      name: childIndex[letter].指标名称,
-      data: childIndex[letter]
-    }));
-    updateState({
-      showEditModal: true,
-      currentEditingIndex: indexData,
-      editFormData: {
-        originalIndexName: indexData.指标名称,
-        formula,
-        saveAsName: ''
-      },
-      editAvailableIndices
-    });
-  }
-  function handleEditInputChange(field, value) {
-    const {
-      editFormData
-    } = stateRef.current;
-    updateState({
-      editFormData: Object.assign({}, editFormData, {
-        [field]: value
-      })
-    });
-  }
-  function handleEditCancel() {
-    updateState({
-      showEditModal: false,
-      currentEditingIndex: null,
-      editFormData: {
-        originalIndexName: '',
-        formula: '',
-        saveAsName: ''
-      },
-      editAvailableIndices: []
-    });
-  }
-  function handleEditConfirm() {
-    const {
-      currentEditingIndex,
-      editFormData,
-      editAvailableIndices,
-      selectedIndexes
-    } = stateRef.current;
-    const {
-      formula
-    } = editFormData;
-    if (!formula || !formula.trim()) {
-      notify.error('请输入计算公式');
-      return;
-    }
-
-    // 清除空格，替换中文括号
-    const cleanFormula = formula.replace(/\s/g, '').replace(/（/g, '(').replace(/）/g, ')');
-
-    // 检查公式是否修改
-    const originalFormula = currentEditingIndex.计算配置.formula;
-    if (cleanFormula === originalFormula) {
-      handleEditCancel();
-      return;
-    }
-
-    // 提取公式中使用的字母
-    const usedLetters = cleanFormula.match(/[a-o]/g) || [];
-    const uniqueLetters = [...new Set(usedLetters)];
-
-    // 验证公式中的字母
-    const availableLetters = editAvailableIndices.map(item => item.letter);
-    const invalidLetters = uniqueLetters.filter(letter => !availableLetters.includes(letter));
-    if (invalidLetters.length > 0) {
-      notify.error(`公式中包含无效的字母: ${invalidLetters.join(', ')}`);
-      return;
-    }
-    if (uniqueLetters.length === 0) {
-      notify.error('公式中至少需要包含一个指标字母（a-o）');
-      return;
-    }
-
-    // 构建 childIndex
-    const childIndex = {};
-    uniqueLetters.forEach(letter => {
-      const indexItem = editAvailableIndices.find(item => item.letter === letter);
-      if (indexItem) {
-        childIndex[letter] = indexItem.data;
-      }
-    });
-
-    // 生成新的 SQL
-    const sql = generateSqlFromFormula(cleanFormula, childIndex, uniqueLetters);
-
-    // 更新selectedIndexes中对应指标的属性
-    const newSelectedIndexes = selectedIndexes.map(index => {
-      if (index.key === currentEditingIndex.key) {
-        return Object.assign({}, index, {
-          计算配置: {
-            formula: cleanFormula,
-            childIndex
-          },
-          指标语句: sql
-        });
-      }
-      return index;
-    });
-
-    // 如果当前指标isCalculate=false，更新indexDataList
-    if (!currentEditingIndex.isCalculate) {
-      const indexInList = indexDataListRef.current.find(item => item.key === currentEditingIndex.key);
-      if (indexInList) {
-        indexInList.计算配置.formula = cleanFormula;
-        indexInList.指标语句 = sql;
-      }
-      $.ajax({
-        url: '',
-        type: 'POST',
-        dataType: 'json',
-        contentType: 'application/json',
-        data: JSON.stringify({
-          action: 'edit_index',
-          dbinfo: dbinfoRef.current,
-          indexinfo: {
-            ...indexInList,
-            指标语句: aesEncrypt(indexInList.指标语句)
-          }
-        }),
-        success: response => {
-          notify.success('编辑成功');
+  function handleEditRow(row) {
+    if (row.isCalculate) {
+      setModal({
+        type: 'formula',
+        mode: 'editTemporary',
+        initial: {
+          index: row,
+          name: row.指标名称,
+          formula: row.计算配置.formula,
+          dependencies: childIndexToDependencies(row.计算配置.childIndex),
         },
-        error: (xhr, status, error) => {
-          notify.error(`请求失败: ${error}`);
-        }
       });
-    }
-    updateState({
-      selectedIndexes: newSelectedIndexes,
-      showEditModal: false,
-      currentEditingIndex: null,
-      editFormData: {
-        originalIndexName: '',
-        formula: '',
-        saveAsName: ''
-      },
-      editAvailableIndices: []
-    }, () => {
-      scheduleTimeout(() => {
-        restoreSelection();
-      }, 50);
-    });
-  }
-  function handleEditSaveAs() {
-    const {
-      currentEditingIndex,
-      editFormData,
-      editAvailableIndices,
-      selectedIndexes
-    } = stateRef.current;
-    const {
-      formula,
-      saveAsName
-    } = editFormData;
-    if (!saveAsName || !saveAsName.trim()) {
-      notify.error('请输入另存指标名');
       return;
     }
-    if (!formula || !formula.trim()) {
-      notify.error('请输入计算公式');
-      return;
-    }
-
-    // 清除空格，替换中文括号
-    const cleanFormula = formula.replace(/\s/g, '').replace(/（/g, '(').replace(/）/g, ')');
-
-    // 提取公式中使用的字母
-    const usedLetters = cleanFormula.match(/[a-o]/g) || [];
-    const uniqueLetters = [...new Set(usedLetters)];
-
-    // 验证公式中的字母
-    const availableLetters = editAvailableIndices.map(item => item.letter);
-    const invalidLetters = uniqueLetters.filter(letter => !availableLetters.includes(letter));
-    if (invalidLetters.length > 0) {
-      notify.error(`公式中包含无效的字母: ${invalidLetters.join(', ')}`);
-      return;
-    }
-    if (uniqueLetters.length === 0) {
-      notify.error('公式中至少需要包含一个指标字母（a-o）');
-      return;
-    }
-
-    // 构建 childIndex
-    const childIndex = {};
-    uniqueLetters.forEach(letter => {
-      const indexItem = editAvailableIndices.find(item => item.letter === letter);
-      if (indexItem) {
-        childIndex[letter] = indexItem.data;
-      }
-    });
-
-    // 生成 SQL
-    const sql = generateSqlFromFormula(cleanFormula, childIndex, uniqueLetters);
-
-    // 生成 UUID
-    const uuid = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    // 创建新指标对象
-    const newIndex = {
-      key: `calc_${uuid}`,
-      table_id: `calc_${uuid}`,
-      指标id: saveAsName.trim(),
-      指标名称: saveAsName.trim(),
-      指标来源: '计算指标',
-      栏目类别: '',
-      isCalculate: true,
-      计算配置: {
-        formula: cleanFormula,
-        childIndex
-      },
-      指标语句: sql
-    };
-
-    // 添加到 selectedIndexes
-    const newSelectedIndexes = [...selectedIndexes, newIndex];
-
-    // 添加到勾选集合
-    checkedRowIndicesRef.current.add(newIndex.key);
-    updateState({
-      selectedIndexes: newSelectedIndexes,
-      showEditModal: false,
-      currentEditingIndex: null,
-      editFormData: {
-        originalIndexName: '',
-        formula: '',
-        saveAsName: ''
-      },
-      editAvailableIndices: []
-    }, () => {
-      scheduleTimeout(() => {
-        restoreSelection();
-        notify.success('另存为成功');
-      }, 50);
-    });
-  }
-  function renderChart() {
-    const {
-      timeSeriesData
-    } = stateRef.current;
-    if (!timeSeriesData || !timeSeriesData.data) {
-      return;
-    }
-    const chartDom = document.getElementById('time_series_chart');
-    if (!chartDom) {
-      return;
-    }
-    timeSeriesChartRef.current = echarts.getInstanceByDom(chartDom);
-    if (timeSeriesChartRef.current) {
-      timeSeriesChartRef.current.clear();
-    } else {
-      timeSeriesChartRef.current = echarts.init(chartDom);
-    }
-
-    // 处理数据
-    const dates = timeSeriesData.index || [];
-    const columns = timeSeriesData.columns || [];
-    const data = timeSeriesData.data || [];
-    const series = columns.map((col, index) => ({
-      name: col,
-      type: 'line',
-      data: data.map(row => row[index]),
-      connectNulls: true
-    }));
-    const option = {
-      title: {
-        text: ''
-      },
-      tooltip: {
-        trigger: 'axis'
-      },
-      legend: {
-        data: columns,
-        top: 15
-      },
-      grid: {},
-      xAxis: {
-        type: 'category',
-        boundaryGap: false,
-        data: dates
-      },
-      yAxis: {
-        type: 'value'
-      },
-      series,
-      dataZoom: [{
-        type: 'inside'
-      }, {
-        show: true,
-        type: 'slider'
-      }]
-    };
-    timeSeriesChartRef.current.setOption(option);
-  }
-  function renderActionButton(props) {
-    const {
-      data
-    } = props;
-    return <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '100%',
-      gap: '10px'
-    }}>
-        {data.计算配置 && data.计算配置.childIndex && <i className="fa fa-edit" style={{
-        cursor: 'pointer',
-        color: '#007bff',
-        fontSize: '16px'
-      }} onClick={() => handleEditIndex(data)} title="指标编辑" />}
-        {data.isCalculate && <i className="fa fa-save" style={{
-        cursor: 'pointer',
-        color: '#28a745',
-        fontSize: '16px'
-      }} onClick={() => handleSaveIndex(data)} title="保存为普通指标" />}
-        <i className="fa fa-trash" style={{
-        cursor: 'pointer',
-        color: 'red',
-        fontSize: '16px'
-      }} onClick={() => handleDeleteRow(data.key)} />
-      </div>;
-  }
-  function renderTreeMenu() {
-    const {
-      originalTreeData,
-      searchText
-    } = stateRef.current;
-    if (!originalTreeData || Object.keys(originalTreeData).length === 0) {
-      return <div className="tree-empty-message">
-          暂无数据
-        </div>;
-    }
-    return <div className="tree-container">
-        <div>
-          <input className="Select-control" id="tree_search_input" style={{
-          cursor: 'text'
-        }} onKeyUp={throttledOnFilterMouseUpRef.current} placeholder="输入关键字(多个以空格分隔)" type="text" />
-        </div>
-        <div style={{
-        width: '100%',
-        paddingTop: '6px',
-        height: 'calc(100%)'
-      }}>
-          <ReactTreeVirtualized data={originalTreeData} toggled searchText={searchText} onNodeDoubleClick={handleNodeClick} contextMenuItems={getContextMenuItems} />
-        </div>
-      </div>;
-  }
-  function renderSelectionGrid() {
-    const {
-      selectedIndexes
-    } = stateRef.current;
-    return <div className="ag-theme-balham" style={{
-      height: '200px',
-      width: '100%'
-    }}>
-        <AgGridReact modules={AG_GRID_MODULES} theme="legacy" defaultColDef={defaultIndexListColDefRef.current} columnDefs={indexListColumnDefsRef.current} rowData={selectedIndexes} rowSelection={rowSelectionRef.current} selectionColumnDef={selectionColumnDefRef.current} onGridReady={onSelectionGridReady} onSelectionChanged={onSelectionChanged} />
-      </div>;
-  }
-  function renderDataTab() {
-    const {
-      timeSeriesData
-    } = stateRef.current;
-    if (!timeSeriesData || !timeSeriesData.data) {
-      return <div className="empty-message">
-          暂无数据，请先提取数据
-        </div>;
-    }
-    const dates = timeSeriesData.index || [];
-    const columns = timeSeriesData.columns || [];
-    const data = timeSeriesData.data || [];
-    const columnDefs = [{
-      headerName: '日期',
-      field: '日期',
-      width: 145,
-      pinned: 'left',
-      cellStyle: {
-        textAlign: 'center'
-      },
-      sort: 'desc'
-    }, ...columns.map(col => {
-      const colDef = {
-        headerName: col,
-        field: col,
-        width: 150,
-        cellStyle: {
-          textAlign: 'center'
-        }
-      };
-      if (col.includes('.')) {
-        colDef.valueGetter = params => params.data[col];
-      }
-      return colDef;
-    })];
-    const defaultColDef = {
-      sortable: true,
-      filter: false,
-      resizable: true,
-      suppressHeaderMenuButton: true,
-      cellStyle: {
-        textAlign: 'center'
-      }
-    };
-    const rowData = dates.map((date, index) => {
-      const row = {
-        日期: date
-      };
-      columns.forEach((col, colIndex) => {
-        row[col] = data[index][colIndex];
-      });
-      return row;
-    });
-    return <div className="ag-theme-balham" style={{
-      height: '100%',
-      width: '100%'
-    }}>
-        <AgGridReact modules={AG_GRID_MODULES} theme="legacy" columnDefs={columnDefs} defaultColDef={defaultColDef} rowData={rowData} onGridReady={onDataGridReady} />
-      </div>;
-  }
-  function renderChartTab() {
-    const {
-      timeSeriesData
-    } = stateRef.current;
-    if (!timeSeriesData || !timeSeriesData.data) {
-      return <div className="empty-message">
-          暂无数据，请先提取数据
-        </div>;
-    }
-    return <div id="time_series_chart" style={{
-      width: '100%',
-      height: '100%'
-    }} />;
-  }
-  function renderCalcModal() {
-    const {
-      showCalcModal,
-      calcFormData,
-      availableIndices
-    } = stateRef.current;
-    if (!showCalcModal) {
-      return null;
-    }
-    return <div className="modal-overlay">
-        <div className="calc-modal-content">
-          <div className="modal-title">新增计算指标</div>
-          <div className="calc-modal-body">
-            {/* 左侧：指标列表 */}
-            <div className="calc-modal-left">
-              <div className="index-list-label">指标列表</div>
-              <div className="index-list-box">
-                {availableIndices.map(item => <div key={item.letter} className="index-list-item">
-                    {item.letter}：{item.name}
-                  </div>)}
-              </div>
-            </div>
-
-            {/* 右侧：表单 */}
-            <div className="calc-modal-right">
-              <div className="calc-form-group">
-                <label className="calc-form-label">新指标名：</label>
-                <input type="text" className="calc-form-input" value={calcFormData.newIndexName} onChange={e => handleCalcInputChange('newIndexName', e.target.value)} placeholder="" />
-              </div>
-
-              <div className="calc-form-group">
-                <label className="calc-form-label">计算公式：</label>
-                <input type="text" className="calc-form-input" value={calcFormData.formula} onChange={e => handleCalcInputChange('formula', e.target.value)} placeholder="" />
-              </div>
-
-              <div className="calc-form-hint">
-                注：计算公式(仅支持 加减乘除 和 英文括号)：+-*/()，例如：(a*2/5+b)*c-3
-              </div>
-            </div>
-          </div>
-
-          <div className="calc-modal-footer">
-            <button onClick={handleCalcConfirm} className='btn-confirm'>
-              确定
-            </button>
-            <button onClick={handleCalcCancel} style={{
-            marginLeft: '10px'
-          }} className='btn-cancel'>
-              取消
-            </button>
-          </div>
-        </div>
-      </div>;
-  }
-  function renderSaveModal() {
-    const {
-      showSaveModal,
-      currentSavingIndex,
-      selectedVariety,
-      selectedCategory,
-      isSavingIndex
-    } = stateRef.current;
-    if (!showSaveModal) {
-      return null;
-    }
-
-    // 品种下拉选项来源于 db_map 的 keys
-    const varietyOptions = Object.keys(db_mapRef.current).map(key => ({
-      value: key,
-      label: key
-    }));
-    // 栏目类别选项根据选中的品种动态获取
-    const categoryOptions = selectedVariety && db_mapRef.current[selectedVariety] ? db_mapRef.current[selectedVariety]['栏目类别'].map(item => ({
-      value: item,
-      label: item
-    })) : [];
-    return <div className="modal-overlay">
-        <div className="save-modal-content">
-          <div className="modal-title">保存为普通指标</div>
-          <div className="save-modal-body">
-            <div className="save-form-group">
-              <label className="save-form-label">指标名称：</label>
-              <div className="save-form-text">{currentSavingIndex ? currentSavingIndex.指标名称 : ''}</div>
-            </div>
-
-            <div className="save-form-group">
-              <label className="save-form-label">品种：</label>
-              <OnPasteSelect placeholder="请选择品种" options={varietyOptions} value={selectedVariety ? {
-              value: selectedVariety,
-              label: selectedVariety
-            } : null} onChange={option => updateState({
-              selectedVariety: option ? option.value : null,
-              selectedCategory: null
-            })} isClearable components={{
-              MenuList: WindowedMenuList
-            }} maxMenuHeight={150} />
-            </div>
-
-            <div className="save-form-group">
-              <label className="save-form-label">栏目类别：</label>
-              <OnPasteSelect placeholder="请选择栏目类别" options={categoryOptions} value={selectedCategory ? {
-              value: selectedCategory,
-              label: selectedCategory
-            } : null} onChange={option => updateState({
-              selectedCategory: option ? option.value : null
-            })} isClearable components={{
-              MenuList: WindowedMenuList
-            }} maxMenuHeight={150} />
-            </div>
-          </div>
-
-          <div className="save-modal-footer">
-            <button onClick={handleSaveConfirm} className="btn-confirm" disabled={isSavingIndex}>
-              确定
-            </button>
-            <button onClick={handleSaveCancel} style={{
-            marginLeft: '10px'
-          }} className="btn-cancel">
-              取消
-            </button>
-          </div>
-        </div>
-      </div>;
-  }
-  function renderEditModal() {
-    const {
-      showEditModal,
-      editFormData,
-      editAvailableIndices
-    } = stateRef.current;
-    if (!showEditModal) {
-      return null;
-    }
-    return <div className="modal-overlay">
-        <div className="calc-modal-content">
-          <div className="modal-title">指标编辑</div>
-
-          <div className="calc-modal-body">
-            {/* 左侧：指标列表 */}
-            <div className="calc-modal-left">
-              <div className="index-list-label">指标列表</div>
-              <div className="index-list-box">
-                {editAvailableIndices.map(item => <div key={item.letter} className="index-list-item">
-                    {item.letter}：{item.name}
-                  </div>)}
-              </div>
-            </div>
-
-            {/* 右侧：表单 */}
-            <div className="calc-modal-right">
-              <div className="calc-form-group">
-                <label className="calc-form-label">指标名：</label>
-                <div className="calc-form-text">{editFormData.originalIndexName}</div>
-              </div>
-
-              <div className="calc-form-group">
-                <label className="calc-form-label">计算公式：</label>
-                <input type="text" className="calc-form-input" value={editFormData.formula} onChange={e => handleEditInputChange('formula', e.target.value)} placeholder="" />
-              </div>
-
-              <div className="calc-form-hint">
-                注：计算公式(仅支持 加减乘除 和 英文括号)：+-*/()，例如：(a*2/5+b)*c-3
-              </div>
-
-              <div className="calc-form-group">
-                <label className="calc-form-label">另存指标名：</label>
-                <input type="text" className="calc-form-input" value={editFormData.saveAsName} onChange={e => handleEditInputChange('saveAsName', e.target.value)} placeholder="" />
-              </div>
-            </div>
-          </div>
-
-          <div className="calc-modal-footer">
-            <button onClick={handleEditConfirm} className='btn-confirm'>
-              确定
-            </button>
-            <button onClick={handleEditSaveAs} style={{
-            marginLeft: '10px'
-          }} className='btn-save-as'>
-              另存为
-            </button>
-            <button onClick={handleEditCancel} style={{
-            marginLeft: '10px'
-          }} className='btn-cancel'>
-              取消
-            </button>
-          </div>
-        </div>
-      </div>;
-  }
-  function renderDeleteConfirmModal() {
-    const {
-      showDeleteConfirm,
-      deletingNode
-    } = stateRef.current;
-    if (!showDeleteConfirm) {
-      return null;
-    }
-    return <div className="modal-overlay">
-        <div className="delete-confirm-modal-content">
-          <div className="delete-confirm-modal-title">删除确认</div>
-          <div className="delete-confirm-modal-body">
-            <p>确定要删除指标 <strong>{deletingNode ? deletingNode.name : ''}</strong> 吗？</p>
-          </div>
-          <div className="delete-confirm-modal-footer">
-            <Button variant="danger" onClick={confirmDelete}>
-              确定
-            </Button>
-            <Button onClick={closeDeleteConfirm} style={{
-            marginLeft: '10px'
-          }}>
-              取消
-            </Button>
-          </div>
-        </div>
-      </div>;
-  }
-  propsRef.current = props;
-  useLayoutEffect(() => {
-    mountedRef.current = true;
-    const timers = timersRef.current;
-    const throttledOnFilterMouseUp = throttledOnFilterMouseUpRef.current;
-    const request = $.ajax({
-      url: '',
-      type: 'POST',
-      dataType: 'json',
-      contentType: 'application/json',
-      data: JSON.stringify({
-        action: 'get_index_list',
-        dbinfo: dbinfoRef.current
-      }),
-      success: response => {
-        if (response.error) {
-          notify.error(`获取指标列表失败: ${response.error}`);
-          return;
-        }
-        const treeData = response.treeNodeDict || {};
-        indexDataListRef.current = response.indexDataList || [];
-        db_mapRef.current = response.db_map || {};
-        // this.typeList = response.typeList.map(item => ({ value: item, label: item })) || [];
-        updateState({
-          treeData,
-          originalTreeData: treeData
+    postAction('get_index_formula', { key: row.key })
+      .then((response) => {
+        const config = response.formula_config || {};
+        setModal({
+          type: 'formula',
+          mode: 'edit',
+          initial: {
+            index: row,
+            name: row.指标名称,
+            formula: config.formula || '',
+            dependencies: childIndexToDependencies(config.childIndex),
+            readOnlyReason: response.is_formula_read_only ? (response.read_only_reason || '该公式暂不支持编辑') : '',
+            displayFormula: response.display_formula || '',
+            rawSql: response.raw_sql || '',
+            calculationDefinition: response.calculation_definition || null,
+          },
         });
-      },
-      error: (xhr, status, error) => {
-        if (status === 'abort') return;
-        notify.error(`请求失败: ${error}`);
-      }
+      })
+      .catch(error => notify.error(`获取指标公式失败: ${error.message}`));
+  }
+
+  function upsertRow(row, replaceKey) {
+    setSelectedIndexes((current) => {
+      const index = current.findIndex(item => item.key === (replaceKey || row.key));
+      if (index === -1) return current.concat(row);
+      const next = current.slice();
+      next[index] = row;
+      return next;
     });
-    return () => {
-      mountedRef.current = false;
-      request.abort();
-      throttledOnFilterMouseUp.cancel();
-      timers.forEach(timer => clearTimeout(timer));
-      timers.clear();
-      if (timeSeriesChartRef.current) {
-        timeSeriesChartRef.current.dispose();
-        timeSeriesChartRef.current = null;
+    setCheckedKeys((current) => {
+      const next = current.filter(key => key !== replaceKey && key !== row.key);
+      return next.concat(row.key);
+    });
+    setChartRows(current => current.map(item => (item.key === (replaceKey || row.key) ? row : item)));
+  }
+
+  function warnIfNotRefreshed(response) {
+    if (response.data_refreshed === false) {
+      notifyWarning('公式已保存，但该语句无法直接写入数据表，指标数据未刷新');
+    }
+  }
+
+  function handleFormulaSubmit(result) {
+    const { initial } = modal;
+    const childIndex = dependenciesToChildIndex(result.dependencies);
+    const config = { formula: result.formula, childIndex };
+    let sql;
+    try {
+      sql = generateSqlFromFormula(result.formula, childIndex, pageConfig.indexManage);
+    } catch (error) {
+      notify.error(error.message);
+      return;
+    }
+    const replacedKey = result.type === 'saveAs' ? null : initial.index && initial.index.key;
+    if (result.type !== 'update' && selectedIndexes.some(row =>
+      row.指标名称 === result.name && row.key !== replacedKey)) {
+      notify.error('操作列表中已存在同名指标');
+      return;
+    }
+
+    if (result.type === 'temporary') {
+      const key = initial.index ? initial.index.key : `calc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      upsertRow({
+        key,
+        指标名称: result.name,
+        指标来源: '计算指标',
+        品种: '',
+        isCalculate: true,
+        计算配置: config,
+        指标语句: sql,
+      }, initial.index && initial.index.key);
+      setModal(null);
+      return;
+    }
+
+    let indexinfo;
+    let action = 'add_index';
+    if (result.type === 'create') {
+      indexinfo = {
+        指标名称: result.name,
+        数据库: result.source.database,
+        指标列表: result.source.list_table,
+        node_id: result.nodeId,
+      };
+    } else if (result.type === 'saveAs') {
+      const source = initial.index;
+      if (!Number.isInteger(source.node_id) || source.node_id <= 0) {
+        notify.error('原指标未归类，不能另存，请先将其移入节点');
+        return;
       }
-    };
-  }, []);
-  const {
-    currentTab,
-    isExtractingData
-  } = stateRef.current;
-  console.log('render 触发了');
-  return <div className="index-data-manage-container">
-        <AlertsWrapper />
-        {/* 左侧树区域 */}
-        <div className="left-panel">
-          {renderTreeMenu()}
+      indexinfo = {
+        指标名称: result.name,
+        数据库: source.数据库,
+        指标列表: source.指标列表,
+        node_id: source.node_id,
+      };
+    } else {
+      action = 'edit_index';
+      indexinfo = { key: initial.index.key };
+    }
+    indexinfo.指标语句 = aesEncrypt(sql);
+    indexinfo.计算配置 = config;
+
+    setSaving(true);
+    postAction(action, { indexinfo })
+      .then((response) => {
+        warnIfNotRefreshed(response);
+        if (action === 'edit_index') {
+          upsertRow({ ...initial.index, 计算配置: response.formula_config, 指标来源: response.指标来源 });
+          notify.success('公式已保存');
+        } else {
+          upsertRow(response, initial.index && initial.index.isCalculate ? initial.index.key : null);
+          setRevealNodeKey(response.key);
+          notify.success('计算指标已保存');
+        }
+        setModal(null);
+        return loadCatalog();
+      })
+      .catch(error => notify.error(`保存失败: ${error.message}`))
+      .finally(() => setSaving(false));
+  }
+
+  // ---------- 保存图表 ----------
+  function handleOpenSaveChart(chartState) {
+    const rows = chartState.chartType === 'pivot'
+      ? orderRows(chartRows, chartState.pivotOrder)
+      : chartRows;
+    const visible = getVisibleRows(rows, chartState.configs, chartState.chartType);
+    const savable = visible.filter(row => !row.isCalculate);
+    if (!savable.length) {
+      notify.error('没有可保存的指标（临时计算指标需先保存为计算指标）');
+      return;
+    }
+    if (savable.length < visible.length) {
+      notifyWarning('临时计算指标不会保存到图表中');
+    }
+    setModal({
+      type: 'saveChart',
+      chartState,
+      rows: savable,
+      defaultName: getDefaultChartName(savable, chartState.configs),
+    });
+  }
+
+  function handleSaveChart(form, gotoDash) {
+    const { chartState, rows } = modal;
+    setSaving(true);
+    postAction('save_chart', {
+      ...form,
+      chartType: chartState.chartType,
+      colorScheme: DEFAULT_COLOR_SCHEME,
+      indexes: rows.map((row) => {
+        const config = chartState.configs[row.指标名称] || {};
+        return {
+          key: row.key,
+          指标名称: row.指标名称,
+          chartType: config.chartType || chartState.chartType,
+          stacked: config.stacked !== undefined ? config.stacked : chartState.isStacked,
+          yAxisIndex: config.yAxisIndex === 1 ? 1 : 0,
+        };
+      }),
+      pivotIndicatorOrder: chartState.pivotOrder,
+      pivotShowVarietyLabels: chartState.showVarietyLabels,
+      pivotVarietyColors: buildVarietyColorMap(rows),
+    })
+      .then((response) => {
+        setModal(null);
+        const dropped = rows.length - (response.savedIndexNames || []).length;
+        notify.success(dropped > 0
+          ? `图表已保存（${dropped} 个其他数据源的指标未保存）`
+          : '图表已保存');
+        if (gotoDash && response.dashboard) {
+          window.open(response.dashboard, '_blank');
+        }
+      })
+      .catch(error => notify.error(`保存图表失败: ${error.message}`))
+      .finally(() => setSaving(false));
+  }
+
+  // ---------- 弹窗 ----------
+  function renderModal() {
+    if (!modal) return null;
+    const hide = () => !saving && setModal(null);
+    const parentOptions = getParentCategoryOptions(catalog.tree, modal.node && modal.node.node_id);
+    const parentOption = modal.parent && parentOptions.find(option => option.value === modal.parent.node_id);
+    switch (modal.type) {
+      case 'formula':
+        return (
+          <FormulaModal
+            mode={modal.mode}
+            initial={modal.initial}
+            candidateIndexes={selectedIndexes}
+            sources={catalog.sources}
+            tree={catalog.tree}
+            categoryMap={catalog.categoryMap}
+            saving={saving}
+            onSubmit={handleFormulaSubmit}
+            onHide={hide}
+          />
+        );
+      case 'saveChart':
+        return (
+          <SaveChartModal
+            userId={pageConfig.userId}
+            defaultName={modal.defaultName}
+            saving={saving}
+            onSave={handleSaveChart}
+            onHide={hide}
+          />
+        );
+      case 'addCategory':
+        return (
+          <CategoryNameModal
+            title="添加子节点"
+            parentPath={parentOption ? parentOption.label : modal.parent.name}
+            saving={saving}
+            onSubmit={name => runTreeMutation(
+              { action: 'add_category', node_name: name, parent_node_id: modal.parent.node_id },
+              '节点已创建', modal.parent.key)}
+            onHide={hide}
+          />
+        );
+      case 'groupCategory':
+        return (
+          <CategoryNameModal
+            title="新建节点并移入指标"
+            description={`新建节点后将移入 ${modal.keys.length} 个指标`}
+            parentPath={parentOption ? parentOption.label : modal.parent.name}
+            saving={saving}
+            onSubmit={name => runTreeMutation({
+              action: 'add_category',
+              node_name: name,
+              parent_node_id: modal.parent.node_id,
+              node_keys: modal.keys,
+            }, '节点已创建', modal.keys[0])}
+            onHide={hide}
+          />
+        );
+      case 'editCategory':
+        return (
+          <CategoryNameModal
+            title="修改节点"
+            initialName={modal.node.name}
+            initialParentId={modal.node.parent_id}
+            parentOptions={parentOptions}
+            saving={saving}
+            onSubmit={(name, parentId) => runTreeMutation(
+              { action: 'update_category', node_id: modal.node.node_id, node_name: name, parent_node_id: parentId },
+              '节点已修改', modal.node.key)}
+            onHide={hide}
+          />
+        );
+      case 'deleteNode':
+        return (
+          <ConfirmModal
+            title={isCategoryNode(modal.node) ? '删除节点' : '删除指标'}
+            message={isCategoryNode(modal.node)
+              ? `确定删除节点“${modal.node.name}”吗？节点下不能有子节点或指标。`
+              : `确定从指标列表中删除“${modal.node.name}”吗？此操作不可恢复。`}
+            saving={saving}
+            onConfirm={() => runTreeMutation(
+              { action: 'delete_node', node_key: modal.node.key }, '删除成功', null,
+              () => handleRemoveRow(modal.node.key))}
+            onHide={hide}
+          />
+        );
+      default:
+        return null;
+    }
+  }
+
+  return (
+    <div className="index-data-manage-container">
+      <AlertsWrapper />
+      <div className="left-panel" style={{ width: sidebarWidth, flexBasis: sidebarWidth }}>
+        <IndexTreePanel
+          tree={catalog.tree}
+          loading={catalogLoading}
+          moving={treeMoving}
+          selectedKeys={treeSelectedKeys}
+          revealNodeKey={revealNodeKey}
+          onNodeClick={handleTreeClick}
+          onNodeDoubleClick={node => addIndexes([node.key])}
+          contextMenuItems={getContextMenuItems}
+          onNodeDrop={handleNodeDrop}
+        />
+      </div>
+      <div
+        className="panel-resizer panel-resizer-column"
+        onMouseDown={startSidebarResize}
+        onDoubleClick={resetSidebarWidth}
+        title="拖动调整宽度，双击恢复默认"
+        role="presentation"
+      />
+      <div className="right-panel">
+        <div className="button-area">
+          <Button className="index-data-action" variant="outline-primary" onClick={handleExtract} disabled={extracting}>提取数据</Button>
+          <Button className="index-data-action" variant="outline-primary" onClick={handleNewFormula}>新建公式</Button>
+          <Button className="index-data-action" variant="outline-primary" onClick={handleClearRows} disabled={!selectedIndexes.length}>
+            清空指标
+          </Button>
+          <span className="button-area-hint">双击或右键指标添加到下方操作列表，Ctrl+单击可多选</span>
         </div>
-
-        {/* 右侧区域 */}
-        <div className="right-panel">
-          {/* 按钮区域 */}
-          <div className="button-area">
-            <Button variant="primary" onClick={handleExtractData} disabled={isExtractingData}>
-              提取数据
-            </Button>
-            <Button variant="outline-secondary" onClick={handleEditFormula} style={{
-          marginLeft: '10px'
-        }}>
-              编辑公式
-            </Button>
-          </div>
-
-          {/* 选中指标信息展示区域 */}
-          <div className="selection-grid-area">
-            {renderSelectionGrid()}
-          </div>
-
-          {/* 时序数据展示区域 */}
-          <div className="data-display-area">
-            {/* Tab标签 */}
-            <div className="tab-header">
-              <div className={`tab-item ${currentTab === 'data' ? 'active' : ''}`} onClick={() => switchTab('data')}>
-                数据
-              </div>
-              <div className={`tab-item ${currentTab === 'chart' ? 'active' : ''}`} onClick={() => switchTab('chart')}>
-                图形
-              </div>
-            </div>
-
-            {/* Tab内容 */}
-            <div className="tab-content">
-              {currentTab === 'data' ? renderDataTab() : renderChartTab()}
-            </div>
-          </div>
+        <div className="selection-grid-area" style={{ height: selectionHeight, flexBasis: selectionHeight }}>
+          <SelectedIndexGrid
+            rows={gridRows}
+            checkedKeys={checkedKeys}
+            onCheckedChange={setCheckedKeys}
+            onEdit={handleEditRow}
+            onRemove={handleRemoveRow}
+            onReorder={handleReorder}
+          />
         </div>
-
-        {/* 计算指标弹出层 */}
-        {renderCalcModal()}
-
-        {/* 保存指标弹出层 */}
-        {renderSaveModal()}
-
-        {/* 编辑指标弹出层 */}
-        {renderEditModal()}
-
-        {/* 删除确认弹出层 */}
-        {renderDeleteConfirmModal()}
-      </div>;
+        <div
+          className="panel-resizer panel-resizer-row"
+          onMouseDown={startSelectionResize}
+          onDoubleClick={resetSelectionHeight}
+          title="拖动调整高度，双击恢复默认"
+          role="presentation"
+        />
+        <DataPanel
+          timeSeriesData={timeSeriesData}
+          chartRows={chartRows}
+          loading={extracting}
+          onSaveChart={handleOpenSaveChart}
+        />
+      </div>
+      {renderModal()}
+    </div>
+  );
 }
-
-
-
-export default IndexDataManageMain;

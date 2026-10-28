@@ -16,7 +16,7 @@
         id="csrf_token"
         value="{{ csrf_token() if csrf_token else '' }}"
 >
-<div id="main_contain" data-db_dict="{{ db_dict }}" data-index_manage="{{ index_manage }}"></div>
+<div id="main_contain" data-index_manage="{{ index_manage }}" data-user-id="{{ user_id }}"></div>
 </body>
 <script src="{{ js_manifest('echarts.min.4.8.js') }}"></script>
 <script src="{{ js_manifest('indexdatamanage.js') }}"></script>

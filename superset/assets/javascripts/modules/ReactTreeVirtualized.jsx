@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import React, { useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import { List, AutoSizer } from '../components/VirtualList';
 
@@ -68,7 +69,7 @@ function flattenTree(node, depth, path, expandedKeys, searchText, matchedKeys, v
  * @param {Array} keywords - 搜索关键字数组
  * @returns {Object} { matchedKeys, visibleKeys }
  */
-function findMatchingNodes(node, searchText, keywords) {
+function findMatchingNodes(node, searchText, keywords, matchNode) {
   const matchedKeys = new Set();
   const visibleKeys = new Set();
 
@@ -83,7 +84,7 @@ function findMatchingNodes(node, searchText, keywords) {
     const nodeName = currentNode.name || '';
 
     // 检查是否匹配所有关键字
-    const isMatch = keywords.every(keyword =>
+    const isMatch = matchNode ? matchNode(currentNode, keywords) : keywords.every(keyword =>
       nodeName.toLowerCase().includes(keyword.toLowerCase())
     );
 
@@ -128,6 +129,35 @@ function findMatchingNodes(node, searchText, keywords) {
  * @param {Set} visibleKeys - 需要显示的节点 key 集合
  * @returns {Set} 需要展开的节点 key 集合
  */
+function findAncestorKeys(node, targetKey, ancestors = []) {
+  if (!node) return null;
+  const nodeKey = node.key || node.name;
+  if (nodeKey === targetKey) return ancestors;
+  const children = node.children || [];
+  for (let i = 0; i < children.length; i++) {
+    const result = findAncestorKeys(children[i], targetKey, [...ancestors, nodeKey]);
+    if (result) return result;
+  }
+  return null;
+}
+
+function getDropPosition(node, event) {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const ratio = rect.height ? (event.clientY - rect.top) / rect.height : 0.5;
+  if (Array.isArray(node.children)) {
+    if (ratio < 0.25) return 'before';
+    if (ratio > 0.75) return 'after';
+    return 'inside';
+  }
+  return ratio < 0.5 ? 'before' : 'after';
+}
+
+const DROP_INDICATOR_STYLES = {
+  before: { boxShadow: 'inset 0 2px 0 #1890ff' },
+  after: { boxShadow: 'inset 0 -2px 0 #1890ff' },
+  inside: { backgroundColor: '#bae7ff' },
+};
+
 function getExpandedKeysForSearch(node, visibleKeys) {
   const expandedKeys = new Set();
 
@@ -209,7 +239,15 @@ function TreeContextMenu(incomingProps) {
     if (typeof props[key] === 'undefined') props[key] = TreeContextMenu.defaultProps[key];
   });
   const menuRef = useRef(null);
-  const { onClose } = props;
+  const { onClose, x, y, items } = props;
+  useLayoutEffect(() => {
+    const menu = menuRef.current;
+    if (!menu) return;
+    const rect = menu.getBoundingClientRect();
+    // 菜单变宽后，靠近窗口边缘时向内调整，避免操作项超出可视范围。
+    menu.style.left = `${Math.max(8, Math.min(x, window.innerWidth - rect.width - 8))}px`;
+    menu.style.top = `${Math.max(8, Math.min(y, window.innerHeight - rect.height - 8))}px`;
+  }, [x, y, items]);
   useLayoutEffect(() => {
     const handleClickOutside = event => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -223,11 +261,6 @@ function TreeContextMenu(incomingProps) {
       document.removeEventListener('scroll', onClose, true);
     };
   }, [onClose]);
-  const {
-    x,
-    y,
-    items
-  } = props;
   if (!items || items.length === 0) {
     return null;
   }
@@ -236,36 +269,46 @@ function TreeContextMenu(incomingProps) {
     top: y,
     left: x,
     backgroundColor: '#fff',
-    border: '1px solid #ccc',
-    borderRadius: '4px',
-    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+    border: '1px solid #dce1ee',
+    borderRadius: '8px',
+    boxShadow: '0 6px 20px rgba(44, 54, 90, 0.14)',
     zIndex: 10000,
-    minWidth: '80px',
-    padding: '4px 0'
+    minWidth: 'min(180px, calc(100vw - 16px))',
+    maxWidth: 'calc(100vw - 16px)',
+    maxHeight: 'calc(100vh - 16px)',
+    overflowY: 'auto',
+    boxSizing: 'border-box',
+    padding: '6px'
   };
   const itemStyle = {
-    padding: '3px 5px',
+    minHeight: '34px',
+    padding: '7px 12px',
+    borderRadius: '5px',
+    boxSizing: 'border-box',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     fontSize: '13px',
-    color: '#333'
+    lineHeight: '20px',
+    color: '#4b5563',
+    whiteSpace: 'nowrap'
   };
   const itemHoverStyle = {
-    backgroundColor: '#f0f0f0'
+    backgroundColor: '#f0f2fa'
   };
-  return <div ref={ref => {
+  // 挂载到页面顶层，避免受树容器的层叠上下文和 overflow 限制。
+  return createPortal(<div ref={ref => {
     menuRef.current = ref;
-  }} style={menuStyle}>
+  }} className="tree-context-menu" style={menuStyle}>
         {items.map((item, index) => {
       if (item.divider) {
-        return <div key={index} style={{
+        return <div key={index} className="tree-context-menu-divider" style={{
           height: '1px',
-          backgroundColor: '#e0e0e0',
-          margin: '4px 0'
+          backgroundColor: '#e7eaf2',
+          margin: '5px 6px'
         }} />;
       }
-      return <div key={index} style={itemStyle} onMouseEnter={e => {
+      return <div key={index} className="tree-context-menu-item" style={itemStyle} onMouseEnter={e => {
         Object.assign(e.currentTarget.style, itemHoverStyle);
       }} onMouseLeave={e => {
         e.currentTarget.style.backgroundColor = '';
@@ -276,15 +319,17 @@ function TreeContextMenu(incomingProps) {
         }
         onClose();
       }}>
-              {item.icon && <i className={item.icon} style={{
-          marginRight: '8px',
+              {item.icon && <i className={item.icon} aria-hidden="true" style={{
+          marginRight: '10px',
           width: '16px',
+          flexShrink: 0,
+          color: '#687287',
           textAlign: 'center'
         }} />}
               <span>{item.label}</span>
             </div>;
     })}
-      </div>;
+      </div>, document.body);
 }
 
 
@@ -322,10 +367,14 @@ function ReactTreeVirtualized(incomingProps) {
       const rootKey = props.data.key || props.data.name;
       initialExpandedKeys.add(rootKey);
     }
+    if (props.revealNodeKey && props.data) {
+      (findAncestorKeys(props.data, props.revealNodeKey) || []).forEach(key => initialExpandedKeys.add(key));
+    }
     return {
       expandedKeys: initialExpandedKeys,
       selectedKey: null,
-      contextMenu: null // { x, y, node, items }
+      contextMenu: null, // { x, y, node, items }
+      dropIndicator: null // { key, position }
     };
   });
   const stateRef = useRef(state);
@@ -344,10 +393,12 @@ function ReactTreeVirtualized(incomingProps) {
   };
   const clickTimerRef = useRef(null);
   const clickDelayRef = useRef(300);
+  const dragNodeRef = useRef(null);
   function getFlattenedData() {
     const {
       data,
-      searchText
+      searchText,
+      matchNode
     } = propsRef.current;
     const {
       expandedKeys
@@ -358,7 +409,7 @@ function ReactTreeVirtualized(incomingProps) {
     let effectiveExpandedKeys = expandedKeys;
     if (searchText) {
       const keywords = searchText.split(/\s+/).filter(k => k.length > 0);
-      const result = findMatchingNodes(data, searchText, keywords);
+      const result = findMatchingNodes(data, searchText, keywords, matchNode);
       matchedKeys = result.matchedKeys;
       visibleKeys = result.visibleKeys;
 
@@ -369,6 +420,7 @@ function ReactTreeVirtualized(incomingProps) {
   }
   function handleToggle(node, event) {
     event.stopPropagation();
+    if (propsRef.current.disabled) return;
     const nodeKey = node.key || node.name;
     const {
       expandedKeys
@@ -389,6 +441,7 @@ function ReactTreeVirtualized(incomingProps) {
     });
   }
   function handleNodeClick(node, event) {
+    if (propsRef.current.disabled) return;
     const hasChildren = node.children && node.children.length > 0;
 
     // 有子节点的节点，点击时展开/折叠
@@ -404,6 +457,7 @@ function ReactTreeVirtualized(incomingProps) {
     }
     clickTimerRef.current = setTimeout(() => {
       clickTimerRef.current = null;
+      if (propsRef.current.disabled) return;
       const nodeKey = node.key || node.name;
       updateState({
         selectedKey: nodeKey
@@ -414,6 +468,7 @@ function ReactTreeVirtualized(incomingProps) {
     }, clickDelayRef.current);
   }
   function handleNodeDoubleClick(node, event) {
+    if (propsRef.current.disabled) return;
     const hasChildren = node.children && node.children.length > 0;
 
     // 有子节点的节点不触发双击事件
@@ -437,6 +492,7 @@ function ReactTreeVirtualized(incomingProps) {
   function handleContextMenu(node, event) {
     event.preventDefault();
     event.stopPropagation();
+    if (propsRef.current.disabled) return;
     const {
       contextMenuItems
     } = propsRef.current;
@@ -461,6 +517,61 @@ function ReactTreeVirtualized(incomingProps) {
       contextMenu: null
     });
   }
+  function setDropIndicator(indicator) {
+    const current = stateRef.current.dropIndicator;
+    if (current === indicator || current && indicator && current.key === indicator.key && current.position === indicator.position) {
+      return;
+    }
+    updateState({
+      dropIndicator: indicator
+    });
+  }
+  function handleDragStart(node, event) {
+    if (propsRef.current.disabled) {
+      event.preventDefault();
+      return;
+    }
+    dragNodeRef.current = node;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', node.key || node.name);
+  }
+  function handleDragOver(node, event) {
+    if (propsRef.current.disabled) return;
+    const dragNode = dragNodeRef.current;
+    const {
+      canDropNode
+    } = propsRef.current;
+    if (!dragNode || dragNode === node) {
+      setDropIndicator(null);
+      return;
+    }
+    const position = getDropPosition(node, event);
+    if (canDropNode && !canDropNode(dragNode, node, position)) {
+      setDropIndicator(null);
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    setDropIndicator({
+      key: node.key || node.name,
+      position
+    });
+  }
+  function handleDrop(node, event) {
+    event.preventDefault();
+    if (propsRef.current.disabled) return;
+    const dragNode = dragNodeRef.current;
+    const indicator = stateRef.current.dropIndicator;
+    dragNodeRef.current = null;
+    setDropIndicator(null);
+    if (dragNode && indicator && indicator.key === (node.key || node.name) && propsRef.current.onNodeDrop) {
+      propsRef.current.onNodeDrop(dragNode, node, indicator.position);
+    }
+  }
+  function handleDragEnd() {
+    dragNodeRef.current = null;
+    setDropIndicator(null);
+  }
   function renderRow({
     index,
     key,
@@ -480,13 +591,27 @@ function ReactTreeVirtualized(incomingProps) {
     } = item;
     const {
       searchText,
-      renderNodeContent
+      renderNodeContent,
+      renderNodeIcon,
+      selectedKeys,
+      canDragNode,
+      onNodeDrop
     } = propsRef.current;
     const {
-      selectedKey
+      selectedKey,
+      dropIndicator
     } = stateRef.current;
     const nodeKey = node.key || node.name;
-    const isSelected = selectedKey === nodeKey;
+    const isSelected = selectedKeys ? selectedKeys.indexOf(nodeKey) !== -1 : selectedKey === nodeKey;
+    const isDraggable = !propsRef.current.disabled && Boolean(canDragNode && canDragNode(node));
+    const dropStyle = dropIndicator && dropIndicator.key === nodeKey ? DROP_INDICATOR_STYLES[dropIndicator.position] : null;
+    const dragProps = onNodeDrop ? {
+      draggable: isDraggable,
+      onDragStart: isDraggable ? e => handleDragStart(node, e) : undefined,
+      onDragOver: e => handleDragOver(node, e),
+      onDrop: e => handleDrop(node, e),
+      onDragEnd: handleDragEnd
+    } : {};
 
     // 搜索关键字
     const keywords = searchText ? searchText.split(/\s+/).filter(k => k.length > 0) : [];
@@ -503,7 +628,8 @@ function ReactTreeVirtualized(incomingProps) {
       cursor: 'pointer',
       backgroundColor: isSelected ? '#e3f2fd' : isMatched ? '#fff8e1' : 'transparent',
       boxSizing: 'border-box',
-      userSelect: 'none'
+      userSelect: 'none',
+      ...dropStyle
     };
 
     // 计算每层的缩进宽度
@@ -551,8 +677,8 @@ function ReactTreeVirtualized(incomingProps) {
     }}>
         {isExpanded ? '−' : '+'}
       </span> : <span style={{
-      width: '6px',
-      marginRight: '0px',
+      width: renderNodeIcon ? '16px' : '6px',
+      marginRight: renderNodeIcon ? '4px' : '0px',
       flexShrink: 0
     }} />;
 
@@ -572,7 +698,7 @@ function ReactTreeVirtualized(incomingProps) {
     }} title={node.name}>
           {displayName}
         </span>;
-    return <div key={key} style={rowStyle} onClick={e => handleNodeClick(node, e)} onDoubleClick={e => handleNodeDoubleClick(node, e)} onContextMenu={e => handleContextMenu(node, e)} onMouseEnter={e => {
+    return <div key={key} style={rowStyle} {...dragProps} onClick={e => handleNodeClick(node, e)} onDoubleClick={e => handleNodeDoubleClick(node, e)} onContextMenu={e => handleContextMenu(node, e)} onMouseEnter={e => {
       if (!isSelected) {
         e.currentTarget.style.backgroundColor = '#f5f5f5';
       }
@@ -583,6 +709,7 @@ function ReactTreeVirtualized(incomingProps) {
     }}>
         {indentElements}
         {toggleIcon}
+        {renderNodeIcon && renderNodeIcon(node, { isExpanded, hasChildren })}
         {content}
       </div>;
   }
@@ -643,13 +770,25 @@ function ReactTreeVirtualized(incomingProps) {
         const keywords = nextProps.searchText.split(/\s+/).filter(k => k.length > 0);
         const {
           visibleKeys
-        } = findMatchingNodes(nextProps.data, nextProps.searchText, keywords);
+        } = findMatchingNodes(nextProps.data, nextProps.searchText, keywords, nextProps.matchNode);
         const searchExpandedKeys = getExpandedKeysForSearch(nextProps.data, visibleKeys);
         updateState({
           expandedKeys: searchExpandedKeys
         });
       }
       // 清空搜索时，不重置展开状态，保持用户手动展开的节点
+    }
+
+    // revealNodeKey 变化或数据刷新后，展开目标节点的所有祖先
+    if (nextProps.revealNodeKey && nextProps.data && (nextProps.revealNodeKey !== propsRef.current.revealNodeKey || nextProps.data !== propsRef.current.data)) {
+      const ancestors = findAncestorKeys(nextProps.data, nextProps.revealNodeKey) || [];
+      if (ancestors.some(key => !stateRef.current.expandedKeys.has(key))) {
+        const newExpandedKeys = new Set(stateRef.current.expandedKeys);
+        ancestors.forEach(key => newExpandedKeys.add(key));
+        updateState({
+          expandedKeys: newExpandedKeys
+        });
+      }
     }
   }
   const previousIncomingPropsRef = useRef(incomingProps);
@@ -661,6 +800,13 @@ function ReactTreeVirtualized(incomingProps) {
     previousIncomingPropsRef.current = incomingProps;
   }
   propsRef.current = props;
+  useLayoutEffect(() => {
+    if (!props.disabled) return;
+    clearTimeout(clickTimerRef.current);
+    clickTimerRef.current = null;
+    dragNodeRef.current = null;
+    setState(current => ({ ...current, contextMenu: null, dropIndicator: null }));
+  }, [props.disabled]);
   useLayoutEffect(() => () => {
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
@@ -712,7 +858,7 @@ function ReactTreeVirtualized(incomingProps) {
       }} />}
           </AutoSizer>}
 
-        {contextMenu && <TreeContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenu.items} onClose={closeContextMenu} />}
+        {!props.disabled && contextMenu && <TreeContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenu.items} onClose={closeContextMenu} />}
       </div>;
 }
 
@@ -733,6 +879,8 @@ ReactTreeVirtualized.propTypes = {
   rowHeight: PropTypes.number,
   // 是否默认展开根节点显示一级目录
   toggled: PropTypes.bool,
+  // 暂停交互，保留展开状态，并清理菜单、拖拽和延迟点击。
+  disabled: PropTypes.bool,
   // 单击回调
   onNodeClick: PropTypes.func,
   // 双击回调
@@ -745,8 +893,22 @@ ReactTreeVirtualized.propTypes = {
   searchText: PropTypes.string,
   // 自定义节点内容渲染
   renderNodeContent: PropTypes.func,
+  // 可选节点类型图标，不影响默认名称渲染和搜索高亮。
+  renderNodeIcon: PropTypes.func,
   // 自定义样式
   style: PropTypes.object,
+  // 自定义搜索匹配 (node, keywords) => bool，默认按名称匹配全部关键字
+  matchNode: PropTypes.func,
+  // 受控的选中节点 key 列表（多选高亮），不传时使用内部单选状态
+  selectedKeys: PropTypes.arrayOf(PropTypes.string),
+  // 需要展开其祖先使之可见的节点 key
+  revealNodeKey: PropTypes.string,
+  // 拖拽：是否允许拖动节点 (node) => bool
+  canDragNode: PropTypes.func,
+  // 拖拽：是否允许放置 (dragNode, targetNode, position) => bool，position 为 before/after/inside
+  canDropNode: PropTypes.func,
+  // 拖拽：放置回调 (dragNode, targetNode, position)，不传时不启用拖拽
+  onNodeDrop: PropTypes.func,
 };
 
 ReactTreeVirtualized.defaultProps = {
@@ -755,13 +917,21 @@ ReactTreeVirtualized.defaultProps = {
   height: null,
   width: null,
   toggled: false,
+  disabled: false,
   onNodeClick: null,
   onNodeDoubleClick: null,
   onNodeToggle: null,
   contextMenuItems: null,
   searchText: '',
   renderNodeContent: null,
+  renderNodeIcon: null,
   style: {},
+  matchNode: null,
+  selectedKeys: null,
+  revealNodeKey: null,
+  canDragNode: null,
+  canDropNode: null,
+  onNodeDrop: null,
 };
 // 示例数据 data示例
 // const treeData = {

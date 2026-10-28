@@ -1307,8 +1307,7 @@ class DashboardModelViewAsync(DashboardModelView):  # noqa
     @expose('/api/get_latest_dashboards_url', methods=['GET'])
     def get_latest_dashboards_url(self):
         if config.get('HOME_PAGE'):
-            if 'only_show_dashboards_test' not in [x.name for x in g.user.roles]:
-                return config.get('HOME_PAGE')
+            return config.get('HOME_PAGE')
         if g.user.home_dash_id:
             return '/superset/dashboard/{0}/'.format(str(g.user.home_dash_id))
         lst = self.get_dashboards_list()
