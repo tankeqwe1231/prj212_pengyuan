@@ -251,10 +251,10 @@ export default function IndexDataManageMain() {
         onClick: () => setModal({ type: 'groupCategory', parent, keys }),
       });
     }
-    items.push(
-      { divider: true },
-      { label: '删除指标', icon: 'fa fa-trash-o', onClick: () => setModal({ type: 'deleteNode', node }) },
-    );
+    // items.push(
+    //   { divider: true },
+    //   { label: '删除指标', icon: 'fa fa-trash-o', onClick: () => setModal({ type: 'deleteNode', node }) },
+    // );
     return items;
   }
 

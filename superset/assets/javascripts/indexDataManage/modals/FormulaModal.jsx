@@ -236,7 +236,7 @@ export default function FormulaModal({
                 />
               </div>
             )}
-            {mode !== 'edit' && (
+            {/* {mode !== 'edit' && (
               <>
                 <label className="calc-save-toggle">
                   <input
@@ -279,7 +279,7 @@ export default function FormulaModal({
                   </>
                 )}
               </>
-            )}
+            )} */}
             {error && <div className="calc-form-error" role="alert">{error}</div>}
           </div>
         </div>
