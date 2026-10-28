@@ -9,6 +9,9 @@ from __future__ import unicode_literals
 from collections import OrderedDict
 import json
 import re
+from superset import (
+    app
+)
 
 from .index_data_sources import (
     full_table_name,
@@ -19,11 +22,12 @@ from .index_data_sources import (
 
 CALCULATED_INDEX_SOURCE = '计算指标'
 METRIC_APPEND_ORDER = 2147483647
+config = app.config
 
 
 def _category_row(connection, node_id):
     return connection.execute(
-        'SELECT node_id,parent_id FROM index_categorys WITH (UPDLOCK, HOLDLOCK) '
+        f'SELECT node_id,parent_id FROM {config.get("INDEX_CATEGORYS")} WITH (UPDLOCK, HOLDLOCK) '
         'WHERE node_id=%s AND node_status=1',
         [int(node_id)],
     ).fetchone()
@@ -39,7 +43,7 @@ def _require_metric_parent(connection, node_id):
 
 def _next_category_order(connection, parent_id):
     max_order = connection.execute(
-        'SELECT ISNULL(MAX(node_order), 0) FROM index_categorys '
+        f'SELECT ISNULL(MAX(node_order), 0) FROM {config.get("INDEX_CATEGORYS")} '
         'WITH (UPDLOCK, HOLDLOCK) WHERE parent_id=%s AND node_status=1',
         [int(parent_id)],
     ).scalar()
@@ -68,9 +72,10 @@ def _update_category_orders(connection, rows):
         return
     result = connection.execute(
         'UPDATE target SET parent_id=desired.parent_id,'
-        'node_order=desired.node_order FROM index_categorys AS target '
+        'node_order=desired.node_order FROM {} AS target '
         'JOIN (VALUES {}) AS desired(parent_id,node_order,node_id) '
         'ON target.node_id=desired.node_id WHERE target.node_status=1'.format(
+            config.get("INDEX_CATEGORYS"),
             ','.join(['(%s,%s,%s)'] * len(rows))),
         [value for row in rows for value in row],
     )
@@ -94,7 +99,7 @@ def create_category(connection, node_name, parent_node_id, groups=None):
     if _category_row(connection, parent_node_id) is None:
         raise ValueError('父节点不存在或已停用')
     duplicate = connection.execute(
-        'SELECT COUNT(1) FROM index_categorys WITH (UPDLOCK, HOLDLOCK) '
+        f'SELECT COUNT(1) FROM {config.get("INDEX_CATEGORYS")} WITH (UPDLOCK, HOLDLOCK) '
         'WHERE parent_id=%s AND node_name=%s AND node_status=1',
         [parent_node_id, node_name],
     ).scalar()
@@ -102,7 +107,7 @@ def create_category(connection, node_name, parent_node_id, groups=None):
         raise ValueError('父节点下已存在同名节点')
     node_order = _next_category_order(connection, parent_node_id)
     inserted = connection.execute(
-        'INSERT INTO index_categorys (node_name,parent_id,node_order,node_status) '
+        f'INSERT INTO {config.get("INDEX_CATEGORYS")} (node_name,parent_id,node_order,node_status) '
         'OUTPUT INSERTED.node_id VALUES (%s,%s,%s,1)',
         [node_name, parent_node_id, node_order],
     ).fetchone()
@@ -137,14 +142,14 @@ def rename_category(connection, node_id, node_name):
     if row[1] in (None, 0):
         raise ValueError('根目录不能重命名')
     duplicate = connection.execute(
-        'SELECT COUNT(1) FROM index_categorys WHERE parent_id=%s '
+        f'SELECT COUNT(1) FROM {config.get("INDEX_CATEGORYS")} WHERE parent_id=%s '
         'AND node_name=%s AND node_id<>%s AND node_status=1',
         [row[1], node_name, int(node_id)],
     ).scalar()
     if duplicate:
         raise ValueError('同级已存在同名分类')
     connection.execute(
-        'UPDATE index_categorys SET node_name=%s WHERE node_id=%s',
+        f'UPDATE {config.get("INDEX_CATEGORYS")} SET node_name=%s WHERE node_id=%s',
         [node_name, int(node_id)],
     )
     return {'node_id': int(node_id), 'node_name': node_name}
@@ -161,7 +166,7 @@ def update_category(connection, node_id, node_name, parent_node_id):
     if row[1] in (None, 0):
         raise ValueError('根目录不能修改')
     duplicate = connection.execute(
-        'SELECT COUNT(1) FROM index_categorys WITH (UPDLOCK, HOLDLOCK) '
+        f'SELECT COUNT(1) FROM {config.get("INDEX_CATEGORYS")} WITH (UPDLOCK, HOLDLOCK) '
         'WHERE parent_id=%s AND node_name=%s AND node_id<>%s AND node_status=1',
         [parent_node_id, node_name, node_id],
     ).scalar()
@@ -171,7 +176,7 @@ def update_category(connection, node_id, node_name, parent_node_id):
     if int(row[1]) != parent_node_id:
         result.update(move_category_node(connection, node_id, parent_node_id))
     updated = connection.execute(
-        'UPDATE index_categorys SET node_name=%s WHERE node_id=%s AND node_status=1',
+        f'UPDATE {config.get("INDEX_CATEGORYS")} SET node_name=%s WHERE node_id=%s AND node_status=1',
         [node_name, node_id],
     )
     if updated.rowcount != 1:
@@ -183,7 +188,7 @@ def update_category(connection, node_id, node_name, parent_node_id):
 def move_category_node(connection, node_id, new_parent_id, new_order=None):
     """移动分类（同级排序也走这里），并重排新旧父节点下的顺序。"""
     rows = connection.execute(
-        'SELECT node_id,parent_id,node_order FROM index_categorys '
+        f'SELECT node_id,parent_id,node_order FROM {config.get("INDEX_CATEGORYS")} '
         'WITH (UPDLOCK, HOLDLOCK) WHERE node_status=1',
     ).fetchall()
     parent_by_id = {int(row[0]): int(row[1] or 0) for row in rows}
@@ -326,7 +331,7 @@ def delete_category(connection, node_id, registry):
     if row[1] in (None, 0):
         raise ValueError('根目录不能删除')
     child_count = connection.execute(
-        'SELECT COUNT(1) FROM index_categorys WHERE parent_id=%s '
+        f'SELECT COUNT(1) FROM {config.get("INDEX_CATEGORYS")} WHERE parent_id=%s '
         'AND node_status=1',
         [node_id],
     ).scalar()
@@ -341,7 +346,7 @@ def delete_category(connection, node_id, registry):
         if metric_count:
             raise ValueError('该分类下还有指标，不能删除')
     connection.execute(
-        'DELETE FROM index_categorys WHERE node_id=%s', [node_id])
+        f'DELETE FROM {config.get("INDEX_CATEGORYS")} WHERE node_id=%s', [node_id])
     return {'node_id': node_id}
 
 

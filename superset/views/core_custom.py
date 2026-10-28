@@ -598,8 +598,8 @@ class IndexDataManage(BaseSupersetView):
                 self._rows(connection.execute(build_index_metadata_sql())),
                 registry)
             categories = self._rows(connection.execute(
-                'SELECT node_id,node_name,parent_id,node_order '
-                'FROM index_categorys WHERE node_status=1'))
+                f'SELECT node_id,node_name,parent_id,node_order '
+                f'FROM {config.get("INDEX_CATEGORYS")} WHERE node_status=1'))
         for record in records:
             record['计算配置'] = self._parse_formula_config(record['计算配置'])
         return {
