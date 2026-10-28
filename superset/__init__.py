@@ -58,7 +58,7 @@ def get_manifest_file(filename):
     domain = request.url.split('//')[1].split('/')[0]
     oss_endpoint = conf.get('OSS_ENDPOINT')
     oss_bucket_js = conf.get('OSS_BUCKET_JS')
-    oss_endpoint = f'https://{oss_bucket_js}.{oss_endpoint}/zjtz/'
+    oss_endpoint = f'https://{oss_bucket_js}.{oss_endpoint}/{conf.get("MANIFEST_DIR_OSS")}/'
     oss_file = ['explore.js', 'dashboard.js']
     externals = ['echarts.min.4.8.js']
     if "localhost" not in domain and '192.168' not in domain:
