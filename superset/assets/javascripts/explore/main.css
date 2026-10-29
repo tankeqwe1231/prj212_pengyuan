@@ -802,6 +802,18 @@
   min-height: 24px;
 }
 
+#explore-container .filter-control .filter-value-col .Select__multi-value[draggable="true"] {
+  cursor: grab;
+}
+
+#explore-container .filter-control .filter-value-col .Select__multi-value[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+#explore-container .filter-control .filter-value-col .Select__multi-value[draggable="true"] .Select__multi-value__remove {
+  cursor: pointer;
+}
+
 #explore-container .filter-control .filter-value-col .Select__multi-value__label,
 #explore-container .filter-control .filter-value-col .Select__multi-value__remove {
   height: auto;

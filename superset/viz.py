@@ -2897,7 +2897,52 @@ class TimeTableViz(BaseViz):
             else:
                 pt = pt.fillna(method=fd.get('second_fillna_method'))
 
-        columns_order = fd.get('index_order')
+        # 根据 fd.filters 中 op == 'in' 且 val 为长度>1 的列表的过滤条件，
+        # 按 val 中的顺序对 pt.columns 中同名的层级重新排序。
+        filters = fd.get('filters') or []
+        filter_order_map = {}
+        for flt in filters:
+            if (flt.get('op') == 'in'
+                    and isinstance(flt.get('val'), list)
+                    and len(flt.get('val')) > 1):
+                filter_order_map[flt.get('col')] = flt.get('val')
+
+        if filter_order_map and len(pt.columns) > 0:
+            if isinstance(pt.columns, pd.MultiIndex):
+                for level_idx, level_name in enumerate(pt.columns.names):
+                    if level_name in filter_order_map:
+                        level_values = list(pt.columns.levels[level_idx])
+                        ordered_vals = filter_order_map[level_name]
+                        ordered_existing = [v for v in ordered_vals if v in level_values]
+                        remaining = [v for v in level_values if v not in ordered_existing]
+                        new_level_order = ordered_existing + remaining
+                        if new_level_order != level_values:
+                            pt = pt.reindex(columns=new_level_order, level=level_name)
+            else:
+                col_name = pt.columns.name
+                if col_name in filter_order_map:
+                    col_values = list(pt.columns)
+                    ordered_vals = filter_order_map[col_name]
+                    ordered_existing = [v for v in ordered_vals if v in col_values]
+                    remaining = [v for v in col_values if v not in ordered_existing]
+                    new_order = ordered_existing + remaining
+                    if new_order != col_values:
+                        pt = pt[new_order]
+        # 过滤条件排序end
+
+        if fd.get('exec_code'):
+            exec_code_str = fd.get('exec_code')
+            regex_exec_code = re.compile(re.escape('execute'), re.IGNORECASE)
+            exec_code_str = regex_exec_code.sub("", exec_code_str)
+            regex_exec_code = re.compile(re.escape('to_sql'), re.IGNORECASE)
+            exec_code_str = regex_exec_code.sub("", exec_code_str)
+            regex_exec_code = re.compile(re.escape('read_sql'), re.IGNORECASE)
+            exec_code_str = regex_exec_code.sub("", exec_code_str)
+
+            loc_dict = {"df": pt}
+            exec(exec_code_str, globals(), loc_dict)
+            pt = loc_dict['df']
+
         records = []
         topcolumn = []
         if hasattr(pt.columns, 'levels'):
@@ -2919,6 +2964,7 @@ class TimeTableViz(BaseViz):
         else:
             records.append(pt.to_dict(orient='index'))
             columns = list(pt.columns)
+        columns_order = fd.get('index_order')
         if len(columns_order):
             columns_order_list = columns_order.split('|')
             columns_order_list = [x for x in columns_order_list if x in columns]
@@ -2960,22 +3006,88 @@ class PivotTableViz(BaseViz):
             raise Exception(_("Group By' and 'Columns' can't overlap"))
         return d
 
+    @staticmethod
+    def _sort_axis_by_filters(df, axis, filter_order_map, margins=False,
+                              subtotal_labels=()):
+        """Order existing siblings within each pivot hierarchy, without reindexing."""
+        index = df.axes[axis]
+        if len(index) < 2 or not any(
+                name in filter_order_map for name in index.names):
+            return df
+
+        if isinstance(index, pd.MultiIndex):
+            levels, codes = index.levels, index.codes
+        else:
+            level_codes, values = pd.factorize(index, sort=False)
+            levels, codes = [values], [level_codes]
+
+        ranks = {}
+        margin_codes = {}
+        for level, name in enumerate(index.names):
+            if name in filter_order_map:
+                value_ranks = {}
+                for rank, value in enumerate(filter_order_map[name]):
+                    value_ranks.setdefault(value, rank)
+                ranks[level] = {
+                    code: value_ranks[value]
+                    for code, value in enumerate(levels[level])
+                    if value in value_ranks
+                }
+            if margins and name is not None:
+                margin_codes[level] = {
+                    code for code, value in enumerate(levels[level])
+                    if value == 'All'
+                }
+        if not any(ranks.values()):
+            return df
+
+        subtotal_positions = {
+            position for position, label in enumerate(index)
+            if label in subtotal_labels
+        } if subtotal_labels else set()
+
+        def sort_positions(positions, level):
+            if level == index.nlevels:
+                return positions
+            groups = {}
+            totals = []
+            for position in positions:
+                # Subtotals belong after all detail rows of their outer group.
+                if level == 1 and position in subtotal_positions:
+                    totals.append(position)
+                else:
+                    groups.setdefault(codes[level][position], []).append(position)
+            level_ranks = ranks.get(level, {})
+            remaining_rank = max(level_ranks.values(), default=-1) + 1
+            ordered_codes = sorted(groups, key=lambda code: (
+                code in margin_codes.get(level, ()),
+                level_ranks.get(code, remaining_rank),
+            ))
+            result = []
+            for code in ordered_codes:
+                result.extend(sort_positions(groups[code], level + 1))
+            return result + totals
+
+        positions = sort_positions(list(range(len(index))), 0)
+        return df.iloc[positions] if axis == 0 else df.iloc[:, positions]
+
     def get_data(self, df):
-        if self.form_data.get('granularity') == 'all' and DTTM_ALIAS in df:
+        fd = self.form_data
+        if fd.get('granularity') == 'all' and DTTM_ALIAS in df:
             del df[DTTM_ALIAS]
         if DTTM_ALIAS in df:
-            df.rename(columns={DTTM_ALIAS: self.form_data.get('granularity_sqla')}, inplace=True)
-        granularity_sqla = self.form_data.get('granularity_sqla')
+            df.rename(columns={DTTM_ALIAS: fd.get('granularity_sqla')}, inplace=True)
+        granularity_sqla = fd.get('granularity_sqla')
         groupby = [granularity_sqla if i == DTTM_ALIAS else i for i
-                   in self.form_data.get('groupby')]
+                   in fd.get('groupby')]
         columns = [granularity_sqla if i == DTTM_ALIAS else i for i
-                   in self.form_data.get('columns')]
-        if self.form_data.get('day_shift_for_annual_start_days') != 0:
+                   in fd.get('columns')]
+        if fd.get('day_shift_for_annual_start_days') != 0:
             df[granularity_sqla] = df[granularity_sqla] + \
                                    pd.Timedelta(
-                                       '{0} days'.format(self.form_data.get('day_shift_for_annual_start_days')))
+                                       '{0} days'.format(fd.get('day_shift_for_annual_start_days')))
 
-        metrics = self.form_data.get('metrics')
+        metrics = fd.get('metrics')
         metric_renew = []
         if isinstance(metrics, list):
             for metric in metrics:
@@ -2993,12 +3105,13 @@ class PivotTableViz(BaseViz):
             index=groupby,
             columns=columns,
             values=metric_renew,
-            aggfunc=self.form_data.get('pandas_aggfunc'),
-            margins=self.form_data.get('pivot_margins'),
+            aggfunc=fd.get('pandas_aggfunc'),
+            margins=fd.get('pivot_margins'),
         )
         if 'listorder' in groupby:
             df.sort_index(ascending=[False, True], level=groupby, inplace=True)
-        if self.form_data.get('sub_total') and df.index.nlevels > 1:
+        subtotal_labels = set()
+        if fd.get('sub_total') and df.index.nlevels > 1:
             table_total = df.groupby(level=groupby[0]).sum()
             if 'All' in table_total.index:
                 table_total.drop(index='All', inplace=True)
@@ -3008,45 +3121,28 @@ class PivotTableViz(BaseViz):
                 for i in range(df.index.nlevels - 2):
                     table_total_reix.append([''] * len(table_total))
                 table_total_reix.append(['Total'] * len(table_total))
-            # else:
-            #     for i in range(len(table_total)):
-            #         table_total_reix.append('Total')
-            table_total.index = table_total_reix
+
+            table_total.index = pd.MultiIndex.from_arrays(
+                table_total_reix, names=df.index.names)
+            subtotal_labels = set(table_total.index)
             table_index = df.index.values.tolist()
             table_reindex = []
             df_concat = pd.concat([df, table_total])
             for idx, val in enumerate(table_index):
                 table_reindex.append(val)
-                if idx > 0:
-                    if df.index.nlevels > 1:
-                        tuple_ix = (table_index[idx - 1][0], 'Total')
-                        if df.index.nlevels > 2:
-                            tuple_ix = (table_index[idx - 1][0], *[''] * (df.index.nlevels - 2), 'Total')
-                        if val[0] != table_index[idx - 1][0]:
-                            del table_reindex[-1]
-                            table_reindex.append(tuple_ix)
-                            table_reindex.append(val)
-                        if idx == (len(table_index) - 1) and val[0] != 'All':
-                            table_reindex.append(tuple_ix)
-
-                    # else:
-                    #     if val != table_index[idx - 1]:
-                    #         del table_reindex[-1]
-                    #         table_reindex.append('Total')
-                    #         table_reindex.append(val)
-                    #     if idx == (len(table_index) - 1) and val != 'All':
-                    #         table_reindex.append('Total')
+                last_in_group = (idx == len(table_index) - 1
+                                 or val[0] != table_index[idx + 1][0])
+                tuple_ix = (val[0], *[''] * (df.index.nlevels - 2), 'Total')
+                if last_in_group and tuple_ix in subtotal_labels:
+                    table_reindex.append(tuple_ix)
             df = df_concat.reindex(table_reindex)
         # Display metrics side by side with each column
-        if self.form_data.get('combine_metric'):
+        if fd.get('combine_metric'):
             df = df.stack(0).unstack()
-
-        # df = pd.concat([df, pd.Series(df['sum__Value']['Ending Stocks'] / df['sum__Value']['Domestic Consumption'])],
-        #                axis=1)
-        if self.form_data.get('eval_code'):
-            df = eval(self.form_data.get('eval_code'))
-        if self.form_data.get('exec_code'):
-            exec_code_str = self.form_data.get('exec_code')
+        if fd.get('eval_code'):
+            df = eval(fd.get('eval_code'))
+        if fd.get('exec_code'):
+            exec_code_str = fd.get('exec_code')
             regex_exec_code = re.compile(re.escape('execute'), re.IGNORECASE)
             exec_code_str = regex_exec_code.sub("", exec_code_str)
             regex_exec_code = re.compile(re.escape('to_sql'), re.IGNORECASE)
@@ -3055,14 +3151,32 @@ class PivotTableViz(BaseViz):
             exec_code_str = regex_exec_code.sub("", exec_code_str)
 
             loc_dict = {"df": df}
-            # exec(exec_code_str, {'__builtins__': {}, "pd": pd, "np": np, "datetime": datetime}, loc_dict)
-            # df = loc_dict['df']
             exec(exec_code_str, {"pd": pd, "datetime": datetime, "np": np, "timedelta": timedelta}, loc_dict)
             df = loc_dict['df']
 
+        # 同时处理行分组和列维度；同一字段重复设置时沿用最后一个有效 in 条件。
+        filter_order_map = {}
+        dimensions = set(groupby + columns)
+        for flt in fd.get('filters') or []:
+            if (isinstance(flt, dict) and flt.get('op') == 'in'
+                    and isinstance(flt.get('val'), list)
+                    and len(flt['val']) > 1):
+                column = flt.get('col')
+                if column == DTTM_ALIAS:
+                    column = granularity_sqla
+                if column in dimensions:
+                    filter_order_map[column] = flt['val']
+
+        df = self._sort_axis_by_filters(
+            df, 0, filter_order_map, fd.get('pivot_margins'), subtotal_labels)
+        # 显式列顺序优先，但不影响 groupby 的过滤排序。
+        if not fd.get('column_order_list'):
+            df = self._sort_axis_by_filters(
+                df, 1, filter_order_map, fd.get('pivot_margins'))
+
         columns = list(df.columns)
-        if self.form_data.get('column_order_list'):
-            column_order_list = literal_eval(self.form_data.get('column_order_list'))
+        if fd.get('column_order_list'):
+            column_order_list = literal_eval(fd.get('column_order_list'))
             if isinstance(column_order_list[0], int):
                 order_idx = [
                     i - 1 for i in column_order_list
@@ -3078,14 +3192,14 @@ class PivotTableViz(BaseViz):
                 ordered_cols = [col for col in column_order_list if col in columns]
                 remaining_cols = [col for col in columns if col not in ordered_cols]
                 columns = ordered_cols + remaining_cols
-        # df.columns = columns
-        df = df.reindex(columns=columns)
+            df = df.reindex(columns=columns)
+
         pd.set_option('display.max_colwidth', None)
         max_list = df.max().tolist()
         min_list = df.min().tolist()
         max_min_column_dict = {}
-        if self.form_data.get('hsl_column'):
-            hsl_column = self.form_data.get('hsl_column')
+        if fd.get('hsl_column'):
+            hsl_column = fd.get('hsl_column')
             if hsl_column:
                 hsl_column_list = hsl_column.split('|')
                 for col in hsl_column_list:

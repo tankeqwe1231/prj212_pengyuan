@@ -1841,6 +1841,8 @@ export const controls = {
     description: '',
     mapStateToProps: state => ({
       datasource: state.datasource,
+      vizType: state.controls && state.controls.viz_type
+        ? state.controls.viz_type.value : state.form_data && state.form_data.viz_type,
     }),
   },
 

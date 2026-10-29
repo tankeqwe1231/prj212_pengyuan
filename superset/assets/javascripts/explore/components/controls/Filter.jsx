@@ -31,9 +31,10 @@ const propTypes = {
   having: PropTypes.bool,
   valuesLoading: PropTypes.bool,
   valueChoices: PropTypes.array,
+  vizType: PropTypes.string,
 };
 
-function Filter({ changeFilter = () => {}, removeFilter = () => {}, filter, datasource = null, having = false, valuesLoading = false, valueChoices = [] }) {
+function Filter({ changeFilter = () => {}, removeFilter = () => {}, filter, datasource = null, having = false, valuesLoading = false, valueChoices = [], vizType }) {
   const switchFilterValue = (prevOp, nextOp) => {
     if (operators[prevOp].type !== operators[nextOp].type) {
       // Switch from array to string or vice versa
@@ -66,7 +67,8 @@ function Filter({ changeFilter = () => {}, removeFilter = () => {}, filter, data
     const operator = operators[currentFilter.op];
     if (operator.useSelect && !having) {
       // TODO should use a simple Select, not a control here...
-      return <SelectControl multi={operator.multi} freeForm name="filter-value" value={currentFilter.val} isLoading={valuesLoading} choices={valueChoices} onChange={changeSelect} showHeader={false} />;
+      const sortable = currentFilter.op === 'in' && (vizType === 'time_table' || vizType === 'pivot_table');
+      return <SelectControl multi={operator.multi} sortable={sortable} freeForm name="filter-value" value={currentFilter.val} isLoading={valuesLoading} choices={valueChoices} onChange={changeSelect} showHeader={false} />;
     }
     return <input type="text" onChange={changeText} value={currentFilter.val || ''} className="form-control form-control-sm" placeholder={t('Filter value')} />;
   };

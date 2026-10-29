@@ -5,6 +5,7 @@ import CreatableSelect from 'react-select/creatable';
 import ControlHeader from '../ControlHeader';
 import { t } from '../../../locales';
 import OnPasteSelect from '../../../components/OnPasteSelect';
+import SortableSelectValue from '../../../components/SortableSelectValue';
 import WindowedMenuList from '../../../components/WindowedMenuList';
 import { normalizeSelectValue, renderSelectLabel } from '../../../components/selectUtils';
 
@@ -17,6 +18,7 @@ const propTypes = {
   isLoading: PropTypes.bool,
   label: PropTypes.string,
   multi: PropTypes.bool,
+  sortable: PropTypes.bool,
   name: PropTypes.string.isRequired,
   onChange: PropTypes.func,
   onFocus: PropTypes.func,
@@ -38,6 +40,7 @@ const defaultProps = {
   isLoading: false,
   label: null,
   multi: false,
+  sortable: false,
   onChange: () => {},
   onFocus: () => {},
   showHeader: true,
@@ -52,6 +55,7 @@ function SelectControl(incomingProps) {
     if (typeof props[key] === 'undefined') props[key] = SelectControl.defaultProps[key];
   });
   const propsRef = useRef(props);
+  const draggedValueRef = useRef(null);
   const [state, setState] = useState(() => ({
     options: getOptions(props)
   }));
@@ -76,6 +80,12 @@ function SelectControl(incomingProps) {
       optionValue = opt ? opt.map(o => o[propsRef.current.valueKey]) : null;
     }
     propsRef.current.onChange(optionValue);
+  }
+  function onSortValue(from, to) {
+    const nextValue = propsRef.current.value.slice();
+    const [movedValue] = nextValue.splice(from, 1);
+    nextValue.splice(to, 0, movedValue);
+    propsRef.current.onChange(nextValue);
   }
   function getOptions(props) {
     if (props.options) {
@@ -140,6 +150,8 @@ function SelectControl(incomingProps) {
   //  Tab, comma or Enter will trigger a new option created for FreeFormSelect
   const placeholder = propsRef.current.placeholder || t('%s option(s)', stateRef.current.options.length);
   const selectedValue = normalizeSelectValue(propsRef.current.value, stateRef.current.options, propsRef.current.valueKey, 'label', propsRef.current.multi);
+  const sortable = propsRef.current.sortable && propsRef.current.multi && !propsRef.current.disabled && Array.isArray(propsRef.current.value);
+  if (!sortable) draggedValueRef.current = null;
   const selectProps = {
     isMulti: propsRef.current.multi,
     name: `select-${propsRef.current.name}`,
@@ -154,8 +166,12 @@ function SelectControl(incomingProps) {
     formatOptionLabel: (option, meta) => renderSelectLabel(option, meta.context, propsRef.current.optionRenderer, propsRef.current.valueRenderer),
     SelectComponent: propsRef.current.freeForm ? CreatableSelect : Select,
     components: {
-      MenuList: WindowedMenuList
+      MenuList: WindowedMenuList,
+      ...(sortable ? { MultiValue: SortableSelectValue } : {}),
     },
+    draggedValueRef,
+    sortableValue: propsRef.current.value,
+    onSortValue,
     isDisabled: propsRef.current.disabled
   };
   return <div>

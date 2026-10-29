@@ -11,6 +11,7 @@ const propTypes = {
   onChange: PropTypes.func,
   value: PropTypes.array,
   datasource: PropTypes.object,
+  vizType: PropTypes.string,
 };
 
 const defaultProps = {
@@ -142,7 +143,7 @@ function FilterControl(incomingProps) {
     stateRef.current.filters.forEach((filter, index) => fetchFilterValues(index));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const filters = propsRef.current.value.map((filter, i) => <div key={i}>
-        <Filter having={propsRef.current.name === 'having_filters'} filter={filter} datasource={propsRef.current.datasource} removeFilter={removeFilter.bind(undefined, i)} changeFilter={changeFilter.bind(undefined, i)} valuesLoading={stateRef.current.filters[i].valuesLoading} valueChoices={stateRef.current.filters[i].valueChoices} />
+        <Filter having={propsRef.current.name === 'having_filters'} vizType={propsRef.current.vizType} filter={filter} datasource={propsRef.current.datasource} removeFilter={removeFilter.bind(undefined, i)} changeFilter={changeFilter.bind(undefined, i)} valuesLoading={stateRef.current.filters[i].valuesLoading} valueChoices={stateRef.current.filters[i].valueChoices} />
       </div>);
   return <div className="filter-control">
         {filters}
