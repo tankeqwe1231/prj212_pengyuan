@@ -21,17 +21,19 @@ function iframeWidget(slice, payload) {
   const username = bootstrap.username;
   $('#code').attr('rows', '15');
   let url = slice.render_template(fd.url);
-  if (url.indexOf('?') >= 0) {
-    url = url + '&username_fengyun=' + username;
-  } else {
-    url = url + '?username_fengyun=' + username;
+  if(url.trim() !== '') {
+    if (url.indexOf('?') >= 0) {
+      url = url + '&username_fengyun=' + username;
+    } else {
+      url = url + '?username_fengyun=' + username;
+    }
+    const iframeToken = payload && payload.data && payload.data.iframe_token;
+    url = appendIframeToken(url, iframeToken);
+    slice.container.html('<iframe style="width:100%;" allowfullscreen allow="fullscreen" allowtransparency="true"></iframe>');
+    const iframe = slice.container.find('iframe');
+    iframe.css('height', slice.height());
+    iframe.attr('src', url);
   }
-  const iframeToken = payload && payload.data && payload.data.iframe_token;
-  url = appendIframeToken(url, iframeToken);
-  slice.container.html('<iframe style="width:100%;" allowfullscreen allow="fullscreen" allowtransparency="true"></iframe>');
-  const iframe = slice.container.find('iframe');
-  iframe.css('height', slice.height());
-  iframe.attr('src', url);
 }
 
 module.exports = iframeWidget;
