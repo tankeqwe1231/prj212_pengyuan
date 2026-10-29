@@ -494,6 +494,7 @@
 }
 
 .index-data-manage-container .config-panel-title {
+  flex-shrink: 0;
   padding: 10px 12px;
   border-bottom: 1px solid #e4e7ef;
   background-color: #f7f8fb;
@@ -508,6 +509,15 @@
   min-height: 0;
   padding: 6px;
   overflow-y: auto;
+}
+
+.index-data-manage-container .config-panel-has-options {
+  overflow-y: auto;
+}
+
+.index-data-manage-container .config-panel-has-options .index-list-area {
+  flex: 0 1 auto;
+  min-height: 46px;
 }
 
 .index-data-manage-container .index-item {
@@ -548,6 +558,7 @@
 
 .index-data-manage-container .extra-info-form {
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 8px;
   padding: 12px;

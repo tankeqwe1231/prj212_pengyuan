@@ -68,6 +68,8 @@ export default function DataPanel({ timeSeriesData, chartRows, loading, onSaveCh
   useEffect(() => {
     setShowVarietyLabels(getVarieties(chartRows).length > 1);
     setPivotOrder(order => reconcileIndicatorOrder(order, chartRows));
+    setSelectedName(name => (chartRows.some(row => row.指标名称 === name)
+      ? name : (chartRows[0] && chartRows[0].指标名称) || null));
   }, [chartRows]);
 
   useEffect(() => {
@@ -81,9 +83,31 @@ export default function DataPanel({ timeSeriesData, chartRows, loading, onSaveCh
 
   const listedRows = chartType === 'pivot' ? orderRows(chartRows, pivotOrder) : chartRows;
   const selectedConfig = (selectedName && configs[selectedName]) || {};
+  const showSeriesOptions = Boolean(selectedName && supportsSeriesOptions(chartType));
 
   function updateConfig(name, patch) {
     setConfigs(current => ({ ...current, [name]: { ...(current[name] || {}), ...patch } }));
+  }
+
+  function updateAllConfigs(patch) {
+    setConfigs(current => {
+      const next = { ...current };
+      chartRows.forEach(({ 指标名称: name }) => {
+        next[name] = { ...(current[name] || {}), ...patch };
+      });
+      return next;
+    });
+  }
+
+  function handleChartTypeChange(type) {
+    setChartType(type);
+    updateAllConfigs({ chartType: type });
+  }
+
+  function handleStackedChange(event) {
+    const stacked = event.target.checked;
+    setIsStacked(stacked);
+    updateAllConfigs({ stacked });
   }
 
   function handleSave() {
@@ -112,7 +136,7 @@ export default function DataPanel({ timeSeriesData, chartRows, loading, onSaveCh
                 type="button"
                 key={option.value}
                 className={`chart-type-btn${chartType === option.value ? ' active' : ''}`}
-                onClick={() => setChartType(option.value)}
+                onClick={() => handleChartTypeChange(option.value)}
               >
                 {option.label}
               </button>
@@ -120,7 +144,7 @@ export default function DataPanel({ timeSeriesData, chartRows, loading, onSaveCh
           </div>
           {supportsSeriesOptions(chartType) && (
             <label className="stack-checkbox">
-              <input type="checkbox" checked={isStacked} onChange={e => setIsStacked(e.target.checked)} />
+              <input type="checkbox" checked={isStacked} onChange={handleStackedChange} />
               <span>堆叠</span>
             </label>
           )}
@@ -155,7 +179,7 @@ export default function DataPanel({ timeSeriesData, chartRows, loading, onSaveCh
               />
             )}
           </div>
-          <div className="config-panel">
+          <div className={`config-panel${showSeriesOptions ? ' config-panel-has-options' : ''}`}>
             <div className="config-panel-title">指标</div>
             <div className="index-list-area">
               {listedRows.map((row) => {
@@ -179,7 +203,7 @@ export default function DataPanel({ timeSeriesData, chartRows, loading, onSaveCh
                 );
               })}
             </div>
-            {selectedName && supportsSeriesOptions(chartType) && (
+            {showSeriesOptions && (
               <div className="extra-info-form">
                 <label className="extra-info-group">
                   <span>图型：</span>
